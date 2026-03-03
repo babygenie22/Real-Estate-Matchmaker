@@ -1,0 +1,117 @@
+import { db } from "./db";
+import { agents } from "@shared/schema";
+import { eq } from "drizzle-orm";
+
+export async function seedDatabase() {
+  const existing = await db.select().from(agents).limit(1);
+  if (existing.length > 0) return;
+
+  const seedAgents = [
+    {
+      name: "Sarah Mitchell",
+      photo: "/images/agent-sarah.png",
+      bio: "With over 15 years in luxury residential real estate, I bring unmatched market knowledge and a personal touch to every transaction. I specialize in helping families find their forever homes in the Bay Area.",
+      licenseNumber: "DRE-01234567",
+      specialties: ["Luxury Homes", "First-Time Buyers", "Relocation"],
+      serviceAreas: ["San Francisco", "Palo Alto", "Menlo Park", "94102", "94301"],
+      languages: ["English", "Spanish"],
+      priceRangeMin: 800000,
+      priceRangeMax: 5000000,
+      rating: 4.9,
+      reviewCount: 127,
+      transactionCount: 243,
+      avgDaysOnMarket: 18,
+      saleToListRatio: 1.03,
+      yearsExperience: 15,
+      personalityTags: ["Analytical", "Patient", "Detail-Oriented"],
+      isApproved: true,
+      subscriptionStatus: "active",
+    },
+    {
+      name: "Michael Torres",
+      photo: "/images/agent-michael.png",
+      bio: "Top producer for 10 consecutive years, I've closed over $300M in real estate transactions. My deep network and negotiation expertise ensure my clients always get the best deal. Former banker – I understand the financial side inside and out.",
+      licenseNumber: "DRE-02345678",
+      specialties: ["Investment Properties", "Commercial", "Luxury Condos"],
+      serviceAreas: ["Los Angeles", "Beverly Hills", "Santa Monica", "90210", "90401"],
+      languages: ["English", "Portuguese"],
+      priceRangeMin: 500000,
+      priceRangeMax: 10000000,
+      rating: 4.8,
+      reviewCount: 214,
+      transactionCount: 387,
+      avgDaysOnMarket: 14,
+      saleToListRatio: 1.02,
+      yearsExperience: 18,
+      personalityTags: ["Bold", "Results-Driven", "Networker"],
+      isApproved: true,
+      subscriptionStatus: "active",
+    },
+    {
+      name: "Priya Sharma",
+      photo: "/images/agent-priya.png",
+      bio: "I'm passionate about helping first-time buyers navigate the complex world of real estate. With a background in architecture, I offer unique insights into property potential and renovation value. Let's find your perfect home together!",
+      licenseNumber: "DRE-03456789",
+      specialties: ["First-Time Buyers", "Fixer-Uppers", "New Construction"],
+      serviceAreas: ["Austin", "Round Rock", "Cedar Park", "78701", "78664"],
+      languages: ["English", "Hindi", "Tamil"],
+      priceRangeMin: 200000,
+      priceRangeMax: 800000,
+      rating: 4.7,
+      reviewCount: 89,
+      transactionCount: 142,
+      avgDaysOnMarket: 22,
+      saleToListRatio: 0.99,
+      yearsExperience: 8,
+      personalityTags: ["Energetic", "Patient", "Educational"],
+      isApproved: true,
+      subscriptionStatus: "active",
+    },
+    {
+      name: "James Washington",
+      photo: "/images/agent-james.png",
+      bio: "A Chicago native with 20+ years of experience, I know every neighborhood like the back of my hand. From historic Brownstones to modern high-rises, I help clients find properties that fit their lifestyle and budget perfectly.",
+      licenseNumber: "DRE-04567890",
+      specialties: ["Urban Properties", "Historic Homes", "Multi-Family"],
+      serviceAreas: ["Chicago", "Evanston", "Oak Park", "60601", "60201"],
+      languages: ["English"],
+      priceRangeMin: 150000,
+      priceRangeMax: 2000000,
+      rating: 4.9,
+      reviewCount: 301,
+      transactionCount: 512,
+      avgDaysOnMarket: 20,
+      saleToListRatio: 1.01,
+      yearsExperience: 22,
+      personalityTags: ["Straightforward", "Experienced", "Community-Focused"],
+      isApproved: true,
+      subscriptionStatus: "active",
+    },
+    {
+      name: "Emily Chen",
+      photo: "/images/agent-emily.png",
+      bio: "Tech-forward realtor serving Seattle's vibrant market. I leverage data analytics and virtual tours to give my clients an edge in competitive bidding situations. Specializing in helping tech professionals relocate to the Pacific Northwest.",
+      licenseNumber: "DRE-05678901",
+      specialties: ["Tech Relocation", "Waterfront Properties", "Smart Homes"],
+      serviceAreas: ["Seattle", "Bellevue", "Kirkland", "Redmond", "98101", "98004"],
+      languages: ["English", "Mandarin"],
+      priceRangeMin: 600000,
+      priceRangeMax: 4000000,
+      rating: 4.8,
+      reviewCount: 156,
+      transactionCount: 198,
+      avgDaysOnMarket: 16,
+      saleToListRatio: 1.04,
+      yearsExperience: 10,
+      personalityTags: ["Tech-Savvy", "Analytical", "Responsive"],
+      isApproved: true,
+      subscriptionStatus: "active",
+    },
+  ];
+
+  for (const agent of seedAgents) {
+    await db.insert(agents).values(agent as any);
+  }
+
+  console.log("Database seeded with sample agents.");
+}
