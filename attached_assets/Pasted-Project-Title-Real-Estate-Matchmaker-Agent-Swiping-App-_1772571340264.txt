@@ -1,0 +1,51 @@
+Project Title: Real Estate Matchmaker – Agent Swiping App
+
+Overview: Build a full‑stack web/mobile application that matches home buyers and sellers with real estate agents using a Tinder‑style interface. Users can log in, browse agent cards with key stats, “like” or “pass” on agents, save favorites, and chat with matched agents. Agents subscribe to the platform, manage their profiles, and view leads. The app must be clean, intuitive and secure.
+
+Front‑End Requirements (React / React Native):
+
+Authentication: Implement registration and login with email/password and social providers (Google/Apple). Use Firebase Auth or Auth0 for secure token management.
+
+Role‑based Views: Provide separate dashboards for consumers and agents. Consumers should answer a questionnaire (location, budget, property type, preferred personality, communication style). Agents must upload license details, biography, specialties, service areas and performance metrics (these can be placeholders for now).
+
+Swiping Interface: Use react‑tinder‑card (or a similar library) to build a card stack showing individual agents. Each card should display the agent’s photo, name, ratings, local transaction count, average days on market, sale‑to‑list ratio, service areas and a few personality icons. Users swipe right to “like” and left to “pass.”
+
+Search & Filter: Provide filters to narrow agents by ZIP code, specialties, languages and price range. Include a search bar and map view using Leaflet or Google Maps API.
+
+Favorites & Matches: Maintain a list of liked agents in local state and persist to the database. When an agent has also accepted the lead (automatically for MVP), move the pair into a “Matches” section where messaging is enabled.
+
+Messaging: Implement a real‑time chat using Socket.io. Each match should have its own chat room. Allow users to schedule a consultation via a calendar picker component; send both parties confirmation emails.
+
+Notifications: Use browser/mobile push notifications to alert users of new matches, message replies and recommended agents.
+
+Responsive UI: Employ Tailwind CSS or Material UI to create a clean, modern interface with easy navigation, clear typography and accessible controls.
+
+Back‑End Requirements (Node.js / Express):
+
+Database Models: Define schemas for Users (role, profile details, preferences), Agents (bio, service areas, performance stats, subscription status), Likes (user→agent swipes), Matches, Messages and Subscriptions.
+
+REST API: Implement endpoints for:
+
+/api/register & /api/login – handle authentication via Firebase/Auth0 tokens.
+
+/api/agents – list agents with optional filters (location, specialties, languages, performance metrics). Should support pagination and sorting.
+
+/api/agents/:id – retrieve a specific agent’s profile.
+
+/api/likes – record likes/dislikes; check for mutual matches.
+
+/api/matches – return matches for a user; create chat threads.
+
+/api/messages – send/receive messages in real‑time.
+
+/api/subscribe – handle agent subscription payments via Stripe (create checkout session and webhooks).
+
+Matching Logic: Write a function that scores agents based on performance metrics and user preferences. Use weights similar to HomeLight’s algorithm (local experience, speed of sale, sale‑to‑list ratio, volume, reviews) and adjust according to user‑selected importance. Return the top N agents for the swiping feed.
+
+Security & Privacy: Enforce authentication and authorization on protected routes. Sanitize inputs, encrypt sensitive data and store passwords securely (e.g., bcrypt for email/password users). Do not expose private user data to other agents or third parties.
+
+Administration: Create a minimal admin interface (could be a protected route) to approve new agents, manage subscriptions and view analytics.
+
+Data & Sample Content: Use a JSON seed file to populate the database with a handful of sample agents (with names, photos, stats and locations) and a test user. Implement functions to compute derived metrics (e.g., sale‑to‑list ratio) from raw transaction data; for the MVP, use placeholder values.
+
+Deployment: Configure the project to run on Replit with separate front‑end and back‑end services or a monorepo. Use environment variables for API keys (Firebase, Stripe, Google Maps). Include a README.md explaining setup steps, how to run the app locally, and how to deploy to Replit.
