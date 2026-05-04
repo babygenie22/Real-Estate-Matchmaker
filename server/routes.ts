@@ -4,7 +4,7 @@ import { setupAuth, isAuthenticated } from "./replit_integrations/auth/replitAut
 import { registerAuthRoutes } from "./replit_integrations/auth/routes";
 import { storage } from "./storage";
 import { seedDatabase } from "./seed";
-import { insertLikeSchema, insertMessageSchema } from "@shared/schema";
+import { insertLikeSchema, insertMessageSchema, insertBookingSchema } from "@shared/schema";
 import { z } from "zod";
 import { Server as SocketIOServer } from "socket.io";
 
@@ -44,7 +44,7 @@ export async function registerRoutes(
   app.get("/api/agents", isAuthenticated, async (req: any, res) => {
     try {
       const { search, specialty, language, zipCode, minPrice, maxPrice, scored } = req.query;
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
 
       let agentList;
       if (scored === "true") {
@@ -74,7 +74,7 @@ export async function registerRoutes(
 
   app.post("/api/likes", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const data = insertLikeSchema.parse({ ...req.body, userId });
       const like = await storage.createLike(data);
       res.json(like);
@@ -85,7 +85,7 @@ export async function registerRoutes(
 
   app.get("/api/likes", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const userLikes = await storage.getLikesByUser(userId);
       res.json(userLikes);
     } catch (err) {
@@ -95,7 +95,7 @@ export async function registerRoutes(
 
   app.get("/api/matches", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const userMatches = await storage.getMatchesByUser(userId);
       res.json(userMatches);
     } catch (err) {
@@ -114,7 +114,7 @@ export async function registerRoutes(
 
   app.post("/api/messages", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const data = insertMessageSchema.parse({ ...req.body, senderId: userId, senderType: "user" });
       const msg = await storage.createMessage(data);
       io.to(`match-${data.matchId}`).emit("new-message", msg);
@@ -126,7 +126,7 @@ export async function registerRoutes(
 
   app.put("/api/users/preferences", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.updateUserPreferences(userId, { ...req.body, onboardingCompleted: true });
       res.json(user);
     } catch (err: any) {
@@ -158,6 +158,55 @@ export async function registerRoutes(
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ message: "Failed to approve agent" });
+    }
+  });
+
+  app.post("/api/bookings", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const data = insertBookingSchema.parse({ ...req.body, userId });
+      const booking = await storage.createBooking(data);
+      res.json(booking);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/notifications", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const items = await storage.getNotificationsByUser(userId);
+      res.json(items);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  });
+
+  app.put("/api/notifications/read-all", isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.markAllNotificationsRead(req.user.id);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to update notifications" });
+    }
+  });
+
+  app.put("/api/notifications/:id/read", isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.markNotificationRead(req.params.id);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to update notification" });
+    }
+  });
+
+  app.get("/api/bookings", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const userBookings = await storage.getBookingsByUser(userId);
+      res.json(userBookings);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch bookings" });
     }
   });
 

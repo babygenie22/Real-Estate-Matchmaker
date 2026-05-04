@@ -63,9 +63,9 @@ export default function MatchesPage() {
 function MatchCard({ match, onMessage }: { match: MatchWithAgent; onMessage: () => void }) {
   const agent = match.agent;
   return (
-    <Card className="hover-elevate cursor-pointer" onClick={onMessage} data-testid={`card-match-${match.id}`}>
+    <Card className="hover-elevate cursor-pointer shadow-xs transition-shadow hover:shadow-md" onClick={onMessage} data-testid={`card-match-${match.id}`}>
       <CardContent className="p-4 flex items-center gap-4">
-        <Avatar className="w-14 h-14 flex-shrink-0">
+        <Avatar className="w-14 h-14 flex-shrink-0 ring-2 ring-primary/15 ring-offset-1">
           {agent.photo ? (
             <AvatarImage src={agent.photo} alt={agent.name} />
           ) : null}
@@ -76,9 +76,9 @@ function MatchCard({ match, onMessage }: { match: MatchWithAgent; onMessage: () 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-semibold text-foreground text-sm">{agent.name}</h3>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 bg-yellow-50 rounded-full px-1.5 py-0.5">
               <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-              <span className="text-xs text-muted-foreground">{agent.rating?.toFixed(1)}</span>
+              <span className="text-xs font-semibold text-yellow-700">{agent.rating?.toFixed(1)}</span>
             </div>
           </div>
           <div className="flex items-center gap-1 mt-0.5">
@@ -87,11 +87,11 @@ function MatchCard({ match, onMessage }: { match: MatchWithAgent; onMessage: () 
           </div>
           <div className="flex gap-1.5 mt-2 flex-wrap">
             {agent.specialties?.slice(0, 2).map((s) => (
-              <Badge key={s} variant="secondary" className="text-xs py-0">{s}</Badge>
+              <Badge key={s} variant="secondary" className="text-xs py-0 bg-primary/8 text-primary border-primary/15">{s}</Badge>
             ))}
           </div>
         </div>
-        <Button size="sm" variant="outline" className="gap-1.5 flex-shrink-0" onClick={(e) => { e.stopPropagation(); onMessage(); }} data-testid={`button-message-${match.id}`}>
+        <Button size="sm" className="gap-1.5 flex-shrink-0 shadow-xs" onClick={(e) => { e.stopPropagation(); onMessage(); }} data-testid={`button-message-${match.id}`}>
           <MessageSquare className="w-3.5 h-3.5" />
           Chat
         </Button>

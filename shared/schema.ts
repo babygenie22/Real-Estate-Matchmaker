@@ -16,6 +16,7 @@ export const sessions = pgTable(
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
+  passwordHash: varchar("password_hash"),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
@@ -26,6 +27,7 @@ export const users = pgTable("users", {
   preferredStyle: varchar("preferred_style"),
   communicationStyle: varchar("communication_style"),
   onboardingCompleted: boolean("onboarding_completed").default(false),
+  expoPushToken: varchar("expo_push_token"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -78,7 +80,38 @@ export const messages = pgTable("messages", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  type: varchar("type").notNull(), // "match" | "message" | "booking"
+  title: varchar("title").notNull(),
+  body: text("body").notNull(),
+  referenceId: varchar("reference_id"),
+  read: boolean("read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
+
+export const bookings = pgTable("bookings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  agentId: varchar("agent_id").notNull().references(() => agents.id),
+  matchId: varchar("match_id").references(() => matches.id),
+  proposedDate: varchar("proposed_date").notNull(),
+  proposedTime: varchar("proposed_time").notNull(),
+  notes: text("notes"),
+  status: varchar("status").default("pending"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertBookingSchema = createInsertSchema(bookings).omit({ id: true, createdAt: true });
+export type InsertBooking = z.infer<typeof insertBookingSchema>;
+export type Booking = typeof bookings.$inferSelect;
+
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, passwordHash: true, createdAt: true, updatedAt: true });
 export const insertAgentSchema = createInsertSchema(agents).omit({ id: true, createdAt: true });
 export const insertLikeSchema = createInsertSchema(likes).omit({ id: true, createdAt: true });
 export const insertMatchSchema = createInsertSchema(matches).omit({ id: true, createdAt: true });

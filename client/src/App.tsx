@@ -11,6 +11,7 @@ import MatchesPage from "@/pages/matches";
 import ChatPage from "@/pages/chat";
 import AdminPage from "@/pages/admin";
 import ProfilePage from "@/pages/profile";
+import NotificationsPage from "@/pages/notifications";
 import AppLayout from "@/components/app-layout";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -50,6 +51,7 @@ function AuthenticatedApp() {
         <Route path="/matches" component={MatchesPage} />
         <Route path="/chat/:matchId" component={ChatPage} />
         <Route path="/admin" component={AdminPage} />
+        <Route path="/notifications" component={NotificationsPage} />
         <Route path="/profile" component={ProfilePage} />
         <Route component={NotFound} />
       </Switch>

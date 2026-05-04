@@ -1,11 +1,25 @@
 import { db } from "./db";
 import { eq, and, ne, notInArray, desc, sql, ilike, or } from "drizzle-orm";
 import {
-  users, agents, likes, matches, messages,
+  users, agents, likes, matches, messages, bookings, notifications,
   type User, type InsertUser, type Agent, type InsertAgent,
   type Like, type InsertLike, type Match, type InsertMatch,
-  type Message, type InsertMessage
+  type Message, type InsertMessage, type Booking, type InsertBooking,
+  type Notification
 } from "@shared/schema";
+import Expo from "expo-server-sdk";
+
+const expo = new Expo();
+
+export async function sendPushNotification(userId: string, title: string, body: string) {
+  try {
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user?.expoPushToken || !Expo.isExpoPushToken(user.expoPushToken)) return;
+    await expo.sendPushNotificationsAsync([{ to: user.expoPushToken, title, body, sound: "default" }]);
+  } catch (err) {
+    console.error("Push notification error:", err);
+  }
+}
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -31,6 +45,14 @@ export interface IStorage {
   getAdminStats(): Promise<{ totalUsers: number; totalAgents: number; totalMatches: number; activeSubscriptions: number }>;
   getPendingAgents(): Promise<Agent[]>;
   approveAgent(id: string): Promise<void>;
+
+  createBooking(booking: InsertBooking): Promise<Booking>;
+  getBookingsByUser(userId: string): Promise<(Booking & { agent: Agent })[]>;
+
+  createNotification(n: { userId: string; type: string; title: string; body: string; referenceId?: string }): Promise<Notification>;
+  getNotificationsByUser(userId: string): Promise<Notification[]>;
+  markNotificationRead(id: string): Promise<void>;
+  markAllNotificationsRead(userId: string): Promise<void>;
 }
 
 export interface AgentFilters {
@@ -153,7 +175,11 @@ export class DatabaseStorage implements IStorage {
   async createLike(like: InsertLike): Promise<Like> {
     const [created] = await db.insert(likes).values(like as any).returning();
     if (like.liked) {
-      await this.createMatch({ userId: like.userId, agentId: like.agentId });
+      const match = await this.createMatch({ userId: like.userId, agentId: like.agentId });
+      const agent = await this.getAgent(like.agentId);
+      const msg = `You matched with ${agent?.name || "an agent"}. Start chatting!`;
+      sendPushNotification(like.userId, "New Match! 🎉", msg);
+      await this.createNotification({ userId: like.userId, type: "match", title: "New Match! 🎉", body: msg, referenceId: match.id });
     }
     return created;
   }
@@ -187,6 +213,16 @@ export class DatabaseStorage implements IStorage {
 
   async createMessage(msg: InsertMessage): Promise<Message> {
     const [created] = await db.insert(messages).values(msg as any).returning();
+    // notify the other party
+    try {
+      const match = await this.getMatch(msg.matchId);
+      if (match) {
+        const recipientId = msg.senderType === "user" ? null : match.userId;
+        if (recipientId) {
+          await this.createNotification({ userId: recipientId, type: "message", title: "New Message", body: msg.content.slice(0, 80), referenceId: msg.matchId });
+        }
+      }
+    } catch {}
     return created;
   }
 
@@ -213,6 +249,42 @@ export class DatabaseStorage implements IStorage {
 
   async approveAgent(id: string): Promise<void> {
     await db.update(agents).set({ isApproved: true }).where(eq(agents.id, id));
+  }
+
+  async createBooking(booking: InsertBooking): Promise<Booking> {
+    const [created] = await db.insert(bookings).values(booking as any).returning();
+    const agent = await this.getAgent(booking.agentId);
+    const msg = `Your consultation request with ${agent?.name || "an agent"} on ${booking.proposedDate} at ${booking.proposedTime} has been received.`;
+    sendPushNotification(booking.userId, "Booking Requested 📅", msg);
+    await this.createNotification({ userId: booking.userId, type: "booking", title: "Booking Requested 📅", body: msg, referenceId: created.id });
+    return created;
+  }
+
+  async getBookingsByUser(userId: string): Promise<(Booking & { agent: Agent })[]> {
+    const userBookings = await db.select().from(bookings).where(eq(bookings.userId, userId)).orderBy(desc(bookings.createdAt));
+    const result = [];
+    for (const b of userBookings) {
+      const agent = await this.getAgent(b.agentId);
+      if (agent) result.push({ ...b, agent });
+    }
+    return result;
+  }
+
+  async createNotification(n: { userId: string; type: string; title: string; body: string; referenceId?: string }): Promise<Notification> {
+    const [created] = await db.insert(notifications).values(n as any).returning();
+    return created;
+  }
+
+  async getNotificationsByUser(userId: string): Promise<Notification[]> {
+    return db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt));
+  }
+
+  async markNotificationRead(id: string): Promise<void> {
+    await db.update(notifications).set({ read: true }).where(eq(notifications.id, id));
+  }
+
+  async markAllNotificationsRead(userId: string): Promise<void> {
+    await db.update(notifications).set({ read: true }).where(eq(notifications.userId, userId));
   }
 }
 

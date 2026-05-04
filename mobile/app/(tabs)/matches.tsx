@@ -1,0 +1,203 @@
+import { useEffect, useState, useCallback } from "react";
+import {
+  View, Text, FlatList, TouchableOpacity, Image, StyleSheet,
+  SafeAreaView, ActivityIndicator, Alert,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { api } from "@/lib/api";
+import { Colors } from "@/lib/constants";
+
+interface Agent {
+  id: string;
+  name: string;
+  photo: string | null;
+  specialties: string[] | null;
+  rating: number | null;
+  reviewCount: number | null;
+  yearsExperience: number | null;
+  serviceAreas: string[] | null;
+}
+
+interface Match {
+  id: string;
+  agentId: string;
+  createdAt: string;
+  agent: Agent;
+}
+
+export default function MatchesScreen() {
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  const loadMatches = useCallback(async () => {
+    try {
+      const data = await api.get<Match[]>("/api/matches");
+      setMatches(data);
+    } catch (err: any) {
+      Alert.alert("Error", err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadMatches(); }, []);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.centered}><ActivityIndicator size="large" color={Colors.primary} /></View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Your Matches</Text>
+        <Text style={styles.subtitle}>{matches.length} agent{matches.length !== 1 ? "s" : ""}</Text>
+      </View>
+
+      {matches.length === 0 ? (
+        <View style={styles.empty}>
+          <Text style={styles.emptyEmoji}>💚</Text>
+          <Text style={styles.emptyTitle}>No matches yet</Text>
+          <Text style={styles.emptySub}>Go to Discover and swipe right on agents you like!</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={matches}
+          keyExtractor={(m) => m.id}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => <MatchCard match={item} />}
+        />
+      )}
+    </SafeAreaView>
+  );
+}
+
+function MatchCard({ match }: { match: Match }) {
+  const router = useRouter();
+  const agent = match.agent;
+  const avatarUri = agent.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&size=120&background=dbeafe&color=2563eb`;
+
+  return (
+    <TouchableOpacity style={styles.card} onPress={() => router.push(`/chat/${match.id}`)} activeOpacity={0.85}>
+      <Image source={{ uri: avatarUri }} style={styles.avatar} />
+      <View style={styles.info}>
+        <Text style={styles.name}>{agent.name}</Text>
+        <View style={styles.ratingRow}>
+          <Text style={styles.star}>⭐</Text>
+          <Text style={styles.ratingText}>{agent.rating?.toFixed(1)}</Text>
+          <Text style={styles.ratingCount}>({agent.reviewCount})</Text>
+          {agent.yearsExperience != null && (
+            <>
+              <Text style={styles.dot}>·</Text>
+              <Text style={styles.yearsText}>{agent.yearsExperience}yr exp</Text>
+            </>
+          )}
+        </View>
+        {agent.serviceAreas && agent.serviceAreas.length > 0 && (
+          <Text style={styles.areas} numberOfLines={1}>
+            📍 {agent.serviceAreas.slice(0, 2).join(", ")}
+          </Text>
+        )}
+        {agent.specialties && agent.specialties.length > 0 && (
+          <View style={styles.tagRow}>
+            {agent.specialties.slice(0, 2).map((s) => (
+              <View key={s} style={styles.tag}>
+                <Text style={styles.tagText}>{s}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+      <View style={styles.actions}>
+        <TouchableOpacity
+          style={styles.chatBtn}
+          onPress={() => router.push(`/chat/${match.id}`)}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.chatBtnText}>💬 Chat</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.bookBtn}
+          onPress={() => router.push(`/booking/${agent.id}`)}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.bookBtnText}>📅 Book</Text>
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.background },
+  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.cardBorder,
+  },
+  title: { fontSize: 24, fontWeight: "800", color: Colors.foreground },
+  subtitle: { fontSize: 13, color: Colors.mutedForeground, marginTop: 2 },
+  list: { padding: 16, gap: 12 },
+  card: {
+    backgroundColor: Colors.card,
+    borderRadius: 18,
+    padding: 16,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    shadowColor: Colors.shadowColor,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  avatar: { width: 70, height: 70, borderRadius: 35, borderWidth: 2, borderColor: Colors.primaryLight },
+  info: { gap: 4 },
+  name: { fontSize: 17, fontWeight: "800", color: Colors.foreground },
+  ratingRow: { flexDirection: "row", alignItems: "center", gap: 3 },
+  star: { fontSize: 12 },
+  ratingText: { fontSize: 13, fontWeight: "700", color: Colors.foreground },
+  ratingCount: { fontSize: 12, color: Colors.mutedForeground },
+  dot: { fontSize: 12, color: Colors.mutedForeground },
+  yearsText: { fontSize: 12, color: Colors.mutedForeground },
+  areas: { fontSize: 12, color: Colors.mutedForeground, marginTop: 2 },
+  tagRow: { flexDirection: "row", gap: 6, flexWrap: "wrap", marginTop: 4 },
+  tag: { backgroundColor: Colors.primaryLight, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  tagText: { fontSize: 11, color: Colors.primary, fontWeight: "600" },
+  actions: { flexDirection: "row", gap: 10 },
+  chatBtn: {
+    flex: 1,
+    backgroundColor: Colors.primary,
+    borderRadius: 12,
+    paddingVertical: 11,
+    alignItems: "center",
+    shadowColor: Colors.primary,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  chatBtnText: { color: "#fff", fontWeight: "800", fontSize: 14 },
+  bookBtn: {
+    flex: 1,
+    backgroundColor: Colors.muted,
+    borderRadius: 12,
+    paddingVertical: 11,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  bookBtnText: { color: Colors.foreground, fontWeight: "700", fontSize: 14 },
+  empty: { flex: 1, justifyContent: "center", alignItems: "center", padding: 32, gap: 12 },
+  emptyEmoji: { fontSize: 64 },
+  emptyTitle: { fontSize: 22, fontWeight: "700", color: Colors.foreground },
+  emptySub: { fontSize: 15, color: Colors.mutedForeground, textAlign: "center", lineHeight: 22 },
+});

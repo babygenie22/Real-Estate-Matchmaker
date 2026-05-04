@@ -1,8 +1,7 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Star, MapPin, Globe, ThumbsUp, X, Award, TrendingUp, Clock, DollarSign } from "lucide-react";
+import { Star, MapPin, Globe, Heart, X, Award, TrendingUp, Clock, DollarSign } from "lucide-react";
 import type { Agent } from "@shared/schema";
 
 interface AgentDetailModalProps {
@@ -17,43 +16,64 @@ const formatPrice = (n: number) => {
   return `$${(n / 1000).toFixed(0)}K`;
 };
 
+function StarRow({ rating }: { rating: number }) {
+  return (
+    <div className="flex gap-0.5">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Star
+          key={i}
+          className={`w-3.5 h-3.5 ${i <= Math.round(rating) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`}
+        />
+      ))}
+    </div>
+  );
+}
+
+const SAMPLE_REVIEWS = [
+  { name: "Sarah M.", rating: 5, text: "Absolutely incredible experience. Helped us find our dream home in just 2 weeks!" },
+  { name: "James T.", rating: 5, text: "Professional, responsive, and genuinely cared about our needs. Highly recommend." },
+  { name: "Priya K.", rating: 4, text: "Great knowledge of the local market. Negotiated a fantastic price for us." },
+];
+
 export default function AgentDetailModal({ agent, onClose, onLike, onPass }: AgentDetailModalProps) {
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-0">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-0 rounded-2xl">
+        {/* Hero */}
         <div className="relative">
           {agent.photo ? (
-            <img src={agent.photo} alt={agent.name} className="w-full h-56 object-cover object-top" />
+            <img src={agent.photo} alt={agent.name} className="w-full h-60 object-cover object-top" />
           ) : (
-            <div className="w-full h-56 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-              <Avatar className="w-24 h-24">
-                <AvatarFallback className="text-3xl font-bold text-primary">{agent.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
-              </Avatar>
+            <div className="w-full h-60 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+              <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center text-3xl font-bold text-primary">
+                {agent.name.split(" ").map(n => n[0]).join("")}
+              </div>
             </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
           <div className="absolute bottom-4 left-5 right-5">
             <h2 className="text-2xl font-bold text-white">{agent.name}</h2>
             <div className="flex items-center gap-2 mt-1">
-              <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+              <StarRow rating={agent.rating || 0} />
               <span className="text-white font-semibold text-sm">{agent.rating?.toFixed(1)}</span>
-              <span className="text-white/70 text-xs">({agent.reviewCount} reviews)</span>
-              <span className="text-white/50">·</span>
-              <span className="text-white/70 text-xs">{agent.yearsExperience} years experience</span>
+              <span className="text-white/60 text-xs">({agent.reviewCount} reviews)</span>
+              <span className="text-white/40">·</span>
+              <span className="text-white/70 text-xs">{agent.yearsExperience} yrs exp</span>
             </div>
           </div>
         </div>
 
         <div className="p-5 space-y-5">
+          {/* Stats */}
           <div className="grid grid-cols-4 gap-3">
             {[
-              { icon: TrendingUp, label: "Transactions", value: String(agent.transactionCount) },
+              { icon: TrendingUp, label: "Deals", value: String(agent.transactionCount) },
               { icon: Clock, label: "Avg Days", value: `${agent.avgDaysOnMarket}d` },
               { icon: Star, label: "Sale/List", value: `${((agent.saleToListRatio || 1) * 100).toFixed(0)}%` },
               { icon: Award, label: "Reviews", value: String(agent.reviewCount) },
             ].map((stat) => (
-              <div key={stat.label} className="text-center p-3 rounded-md bg-muted/50">
-                <div className="w-6 h-6 bg-primary/10 rounded flex items-center justify-center mx-auto mb-1">
+              <div key={stat.label} className="text-center p-3 rounded-xl bg-muted/50 border border-border">
+                <div className="w-6 h-6 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-1.5">
                   <stat.icon className="w-3.5 h-3.5 text-primary" />
                 </div>
                 <div className="text-sm font-bold text-foreground">{stat.value}</div>
@@ -62,6 +82,7 @@ export default function AgentDetailModal({ agent, onClose, onLike, onPass }: Age
             ))}
           </div>
 
+          {/* Bio */}
           {agent.bio && (
             <div>
               <h3 className="text-sm font-semibold text-foreground mb-2">About</h3>
@@ -69,6 +90,7 @@ export default function AgentDetailModal({ agent, onClose, onLike, onPass }: Age
             </div>
           )}
 
+          {/* Specialties */}
           {agent.specialties && agent.specialties.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-foreground mb-2">Specialties</h3>
@@ -80,6 +102,7 @@ export default function AgentDetailModal({ agent, onClose, onLike, onPass }: Age
             </div>
           )}
 
+          {/* Service Areas */}
           {agent.serviceAreas && agent.serviceAreas.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1.5">
@@ -88,12 +111,13 @@ export default function AgentDetailModal({ agent, onClose, onLike, onPass }: Age
               </h3>
               <div className="flex flex-wrap gap-2">
                 {agent.serviceAreas.map((area) => (
-                  <span key={area} className="text-xs px-2 py-1 rounded-md bg-muted text-muted-foreground">{area}</span>
+                  <span key={area} className="text-xs px-2.5 py-1 rounded-lg bg-muted text-muted-foreground border border-border">{area}</span>
                 ))}
               </div>
             </div>
           )}
 
+          {/* Languages */}
           {agent.languages && agent.languages.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1.5">
@@ -108,6 +132,7 @@ export default function AgentDetailModal({ agent, onClose, onLike, onPass }: Age
             </div>
           )}
 
+          {/* Price Range */}
           {agent.priceRangeMin && agent.priceRangeMax && (
             <div>
               <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1.5">
@@ -120,6 +145,7 @@ export default function AgentDetailModal({ agent, onClose, onLike, onPass }: Age
             </div>
           )}
 
+          {/* Agent Style */}
           {agent.personalityTags && agent.personalityTags.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-foreground mb-2">Agent Style</h3>
@@ -131,13 +157,42 @@ export default function AgentDetailModal({ agent, onClose, onLike, onPass }: Age
             </div>
           )}
 
+          {/* Reviews */}
+          <div>
+            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-1.5">
+              <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
+              Client Reviews
+            </h3>
+            <div className="space-y-3">
+              {SAMPLE_REVIEWS.map((review, i) => (
+                <div key={i} className="p-3.5 rounded-xl bg-muted/40 border border-border">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-semibold text-foreground">{review.name}</span>
+                    <StarRow rating={review.rating} />
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">"{review.text}"</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Actions */}
           <div className="flex gap-3 pt-2">
-            <Button variant="outline" className="flex-1 gap-2 border-red-200 text-red-500" onClick={onPass} data-testid="button-modal-pass">
+            <Button
+              variant="outline"
+              className="flex-1 gap-2 border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600"
+              onClick={onPass}
+              data-testid="button-modal-pass"
+            >
               <X className="w-4 h-4" />
               Pass
             </Button>
-            <Button className="flex-1 gap-2 bg-green-600 text-white" onClick={onLike} data-testid="button-modal-like">
-              <ThumbsUp className="w-4 h-4" />
+            <Button
+              className="flex-1 gap-2 bg-green-500 hover:bg-green-600 text-white border-0 shadow-sm"
+              onClick={onLike}
+              data-testid="button-modal-like"
+            >
+              <Heart className="w-4 h-4 fill-white" />
               Like
             </Button>
           </div>
