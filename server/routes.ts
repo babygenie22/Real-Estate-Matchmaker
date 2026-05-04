@@ -1,12 +1,23 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { setupAuth, isAuthenticated } from "./replit_integrations/auth/replitAuth";
+import { setupAuth, isAuthenticated, hashPassword } from "./replit_integrations/auth/replitAuth";
 import { registerAuthRoutes } from "./replit_integrations/auth/routes";
 import { storage } from "./storage";
 import { seedDatabase } from "./seed";
-import { insertLikeSchema, insertMessageSchema, insertBookingSchema } from "@shared/schema";
+import { insertLikeSchema, insertMessageSchema, insertBookingSchema, insertReviewSchema } from "@shared/schema";
 import { z } from "zod";
 import { Server as SocketIOServer } from "socket.io";
+import { searchRealEstateAgents, getPlacePhotoUrl } from "./integrations/google-places";
+import { getMarketStatsByZip } from "./integrations/rentcast";
+
+// Middleware: confirms the request user has a linked agent profile
+async function isAgent(req: any, res: any, next: any) {
+  if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+  const agentProfile = await storage.getAgentByUserId(req.user.id);
+  if (!agentProfile) return res.status(403).json({ message: "Agent profile required. Register at /agent-register." });
+  req.agentProfile = agentProfile;
+  next();
+}
 
 export async function registerRoutes(
   httpServer: Server,
@@ -14,17 +25,12 @@ export async function registerRoutes(
 ): Promise<Server> {
   await setupAuth(app);
   registerAuthRoutes(app);
-
   await seedDatabase();
 
-  const io = new SocketIOServer(httpServer, {
-    cors: { origin: "*" }
-  });
+  const io = new SocketIOServer(httpServer, { cors: { origin: "*" } });
 
   io.on("connection", (socket) => {
-    socket.on("join-match", (matchId: string) => {
-      socket.join(`match-${matchId}`);
-    });
+    socket.on("join-match", (matchId: string) => socket.join(`match-${matchId}`));
 
     socket.on("send-message", async (data: { matchId: string; content: string; senderId: string; senderType: string }) => {
       try {
@@ -41,11 +47,12 @@ export async function registerRoutes(
     });
   });
 
+  // ─── AGENTS ────────────────────────────────────────────────────────────────
+
   app.get("/api/agents", isAuthenticated, async (req: any, res) => {
     try {
       const { search, specialty, language, zipCode, minPrice, maxPrice, scored } = req.query;
       const userId = req.user.id;
-
       let agentList;
       if (scored === "true") {
         agentList = await storage.getScoredAgents(userId);
@@ -62,6 +69,17 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/agents/nearby", isAuthenticated, async (req: any, res) => {
+    try {
+      const { location } = req.query;
+      if (!location) return res.status(400).json({ message: "location query param required" });
+      const results = await searchRealEstateAgents(String(location));
+      res.json(results);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || "Failed to search nearby agents" });
+    }
+  });
+
   app.get("/api/agents/:id", isAuthenticated, async (req: any, res) => {
     try {
       const agent = await storage.getAgent(req.params.id);
@@ -71,6 +89,56 @@ export async function registerRoutes(
       res.status(500).json({ message: "Failed to fetch agent" });
     }
   });
+
+  app.post("/api/agents/import-from-places", isAuthenticated, async (req: any, res) => {
+    try {
+      const { placeId, name, address, phone, website, rating, userRatingCount, photoReference } = req.body;
+      if (!placeId || !name) return res.status(400).json({ message: "placeId and name required" });
+      const photo = photoReference ? getPlacePhotoUrl(photoReference) : null;
+      const agent = await storage.createAgent({
+        name,
+        photo,
+        bio: `Licensed real estate professional serving ${address}`,
+        phone,
+        website,
+        googlePlaceId: placeId,
+        rating: rating ?? 0,
+        reviewCount: userRatingCount ?? 0,
+        serviceAreas: [address],
+        isApproved: false,
+        subscriptionStatus: "pending",
+      } as any);
+      res.json(agent);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  // ─── REVIEWS ───────────────────────────────────────────────────────────────
+
+  app.get("/api/agents/:id/reviews", isAuthenticated, async (req: any, res) => {
+    try {
+      const agentReviews = await storage.getReviewsByAgent(req.params.id);
+      res.json(agentReviews);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch reviews" });
+    }
+  });
+
+  app.post("/api/reviews", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const data = insertReviewSchema.parse({ ...req.body, userId });
+      const existing = await storage.getReviewByUserAndAgent(userId, data.agentId);
+      if (existing) return res.status(400).json({ message: "You have already reviewed this agent" });
+      const review = await storage.createReview(data);
+      res.json(review);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  // ─── LIKES ─────────────────────────────────────────────────────────────────
 
   app.post("/api/likes", isAuthenticated, async (req: any, res) => {
     try {
@@ -92,6 +160,8 @@ export async function registerRoutes(
       res.status(500).json({ message: "Failed to fetch likes" });
     }
   });
+
+  // ─── MATCHES ───────────────────────────────────────────────────────────────
 
   app.get("/api/matches", isAuthenticated, async (req: any, res) => {
     try {
@@ -124,6 +194,8 @@ export async function registerRoutes(
     }
   });
 
+  // ─── USERS ─────────────────────────────────────────────────────────────────
+
   app.put("/api/users/preferences", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
@@ -134,32 +206,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/admin/stats", isAuthenticated, async (req: any, res) => {
-    try {
-      const stats = await storage.getAdminStats();
-      res.json(stats);
-    } catch (err) {
-      res.status(500).json({ message: "Failed to fetch stats" });
-    }
-  });
-
-  app.get("/api/admin/pending-agents", isAuthenticated, async (req: any, res) => {
-    try {
-      const pending = await storage.getPendingAgents();
-      res.json(pending);
-    } catch (err) {
-      res.status(500).json({ message: "Failed to fetch pending agents" });
-    }
-  });
-
-  app.post("/api/admin/agents/:id/approve", isAuthenticated, async (req: any, res) => {
-    try {
-      await storage.approveAgent(req.params.id);
-      res.json({ success: true });
-    } catch (err) {
-      res.status(500).json({ message: "Failed to approve agent" });
-    }
-  });
+  // ─── BOOKINGS ──────────────────────────────────────────────────────────────
 
   app.post("/api/bookings", isAuthenticated, async (req: any, res) => {
     try {
@@ -171,6 +218,18 @@ export async function registerRoutes(
       res.status(400).json({ message: err.message });
     }
   });
+
+  app.get("/api/bookings", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const userBookings = await storage.getBookingsByUser(userId);
+      res.json(userBookings);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch bookings" });
+    }
+  });
+
+  // ─── NOTIFICATIONS ─────────────────────────────────────────────────────────
 
   app.get("/api/notifications", isAuthenticated, async (req: any, res) => {
     try {
@@ -200,13 +259,207 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/bookings", isAuthenticated, async (req: any, res) => {
+  // ─── MARKET DATA ───────────────────────────────────────────────────────────
+
+  app.get("/api/market-data", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.id;
-      const userBookings = await storage.getBookingsByUser(userId);
-      res.json(userBookings);
+      const { zipCode } = req.query;
+      if (!zipCode) return res.status(400).json({ message: "zipCode query param required" });
+      const stats = await getMarketStatsByZip(String(zipCode));
+      res.json(stats);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || "Failed to fetch market data" });
+    }
+  });
+
+  // ─── AGENT PORTAL ──────────────────────────────────────────────────────────
+
+  // Agent self-registration — creates user (role=agent) + agent profile in one call
+  app.post("/api/agent-portal/register", async (req: any, res) => {
+    try {
+      const schema = z.object({
+        email: z.string().email(),
+        password: z.string().min(6),
+        name: z.string().min(2),
+        licenseNumber: z.string().min(3),
+        phone: z.string().optional(),
+        bio: z.string().optional(),
+        photo: z.string().optional(),
+        website: z.string().optional(),
+        linkedinUrl: z.string().optional(),
+        specialties: z.array(z.string()).optional(),
+        serviceAreas: z.array(z.string()).optional(),
+        languages: z.array(z.string()).optional(),
+        priceRangeMin: z.number().optional(),
+        priceRangeMax: z.number().optional(),
+        yearsExperience: z.number().optional(),
+        personalityTags: z.array(z.string()).optional(),
+      });
+      const data = schema.parse(req.body);
+      const { authStorage } = await import("./replit_integrations/auth/storage");
+
+      const existing = await authStorage.getUserByEmail(data.email.toLowerCase().trim());
+      if (existing) return res.status(400).json({ message: "An account with this email already exists" });
+
+      const passwordHash = hashPassword(data.password);
+      const user = await authStorage.createUser({
+        email: data.email.toLowerCase().trim(),
+        passwordHash,
+        role: "agent",
+        onboardingCompleted: true,
+      });
+
+      const agent = await storage.createAgent({
+        userId: user.id,
+        name: data.name,
+        licenseNumber: data.licenseNumber,
+        phone: data.phone,
+        bio: data.bio,
+        photo: data.photo || null,
+        website: data.website || null,
+        linkedinUrl: data.linkedinUrl || null,
+        specialties: data.specialties || [],
+        serviceAreas: data.serviceAreas || [],
+        languages: data.languages?.length ? data.languages : ["English"],
+        priceRangeMin: data.priceRangeMin,
+        priceRangeMax: data.priceRangeMax,
+        yearsExperience: data.yearsExperience,
+        personalityTags: data.personalityTags || [],
+        isApproved: false,
+        subscriptionStatus: "trial",
+        rating: 0,
+        reviewCount: 0,
+        transactionCount: 0,
+      } as any);
+
+      if (user.email) {
+        import("./integrations/resend").then(({ sendAgentWelcomeEmail }) =>
+          sendAgentWelcomeEmail(user.email!, data.name).catch(() => {})
+        );
+      }
+
+      const { passwordHash: _, ...safeUser } = user as any;
+      res.json({ user: safeUser, agent });
+    } catch (err: any) {
+      if (err.name === "ZodError") return res.status(400).json({ message: err.errors[0]?.message || "Validation error" });
+      console.error("Agent registration error:", err);
+      res.status(500).json({ message: "Registration failed" });
+    }
+  });
+
+  // Get own agent profile
+  app.get("/api/agent-portal/me", isAuthenticated, isAgent, async (req: any, res) => {
+    res.json(req.agentProfile);
+  });
+
+  // Update own agent profile
+  app.put("/api/agent-portal/profile", isAuthenticated, isAgent, async (req: any, res) => {
+    try {
+      const agentId = req.agentProfile.id;
+      const allowed = ["name","bio","photo","phone","website","linkedinUrl","specialties","serviceAreas","languages","priceRangeMin","priceRangeMax","yearsExperience","personalityTags"];
+      const updates: any = {};
+      for (const f of allowed) if (req.body[f] !== undefined) updates[f] = req.body[f];
+      const agent = await storage.updateAgent(agentId, updates);
+      res.json(agent);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  // Agent's client matches
+  app.get("/api/agent-portal/matches", isAuthenticated, isAgent, async (req: any, res) => {
+    try {
+      const agentMatches = await storage.getMatchesByAgent(req.agentProfile.id);
+      res.json(agentMatches);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch matches" });
+    }
+  });
+
+  // Agent's booking requests
+  app.get("/api/agent-portal/bookings", isAuthenticated, isAgent, async (req: any, res) => {
+    try {
+      const agentBookings = await storage.getBookingsByAgent(req.agentProfile.id);
+      res.json(agentBookings);
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch bookings" });
+    }
+  });
+
+  // Confirm / decline / reschedule a booking
+  app.put("/api/agent-portal/bookings/:id", isAuthenticated, isAgent, async (req: any, res) => {
+    try {
+      const { status, agentNotes, confirmedDate, confirmedTime } = req.body;
+      if (!["confirmed", "declined", "rescheduled"].includes(status)) {
+        return res.status(400).json({ message: "status must be confirmed, declined, or rescheduled" });
+      }
+      const booking = await storage.updateBookingStatus(req.params.id, status, agentNotes, confirmedDate, confirmedTime);
+      res.json(booking);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  // Agent sends a message
+  app.post("/api/agent-portal/messages", isAuthenticated, isAgent, async (req: any, res) => {
+    try {
+      const data = insertMessageSchema.parse({ ...req.body, senderId: req.user.id, senderType: "agent" });
+      const msg = await storage.createMessage(data);
+      io.to(`match-${data.matchId}`).emit("new-message", msg);
+      res.json(msg);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  // Agent portal stats overview
+  app.get("/api/agent-portal/stats", isAuthenticated, isAgent, async (req: any, res) => {
+    try {
+      const agentId = req.agentProfile.id;
+      const [matchList, bookingList, reviewList] = await Promise.all([
+        storage.getMatchesByAgent(agentId),
+        storage.getBookingsByAgent(agentId),
+        storage.getReviewsByAgent(agentId),
+      ]);
+      res.json({
+        totalMatches: matchList.length,
+        pendingBookings: bookingList.filter(b => b.status === "pending").length,
+        confirmedBookings: bookingList.filter(b => b.status === "confirmed").length,
+        totalReviews: reviewList.length,
+        averageRating: req.agentProfile.rating ?? 0,
+        isApproved: req.agentProfile.isApproved,
+      });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch agent stats" });
+    }
+  });
+
+  // ─── ADMIN ─────────────────────────────────────────────────────────────────
+
+  app.get("/api/admin/stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const stats = await storage.getAdminStats();
+      res.json(stats);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch stats" });
+    }
+  });
+
+  app.get("/api/admin/pending-agents", isAuthenticated, async (req: any, res) => {
+    try {
+      const pending = await storage.getPendingAgents();
+      res.json(pending);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch pending agents" });
+    }
+  });
+
+  app.post("/api/admin/agents/:id/approve", isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.approveAgent(req.params.id);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to approve agent" });
     }
   });
 

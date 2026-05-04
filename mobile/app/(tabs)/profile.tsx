@@ -107,6 +107,46 @@ export default function ProfileScreen() {
           )}
         </View>
 
+        {/* Tools */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Tools</Text>
+          <TouchableOpacity
+            style={styles.toolRow}
+            onPress={() => router.push("/mortgage-calculator")}
+            activeOpacity={0.7}
+          >
+            <View style={styles.toolIconWrap}>
+              <Text style={styles.toolIcon}>🏦</Text>
+            </View>
+            <View style={styles.toolInfo}>
+              <Text style={styles.toolLabel}>Mortgage Calculator</Text>
+              <Text style={styles.toolSub}>Estimate your monthly payments</Text>
+            </View>
+            <Text style={styles.toolChevron}>›</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Agent Portal (only for agents) */}
+        {user?.role === "agent" && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Agent Tools</Text>
+            <TouchableOpacity
+              style={[styles.toolRow, styles.agentToolRow]}
+              onPress={() => router.push("/agent")}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.toolIconWrap, { backgroundColor: "#dbeafe" }]}>
+                <Text style={styles.toolIcon}>🏠</Text>
+              </View>
+              <View style={styles.toolInfo}>
+                <Text style={styles.toolLabel}>Agent Portal</Text>
+                <Text style={styles.toolSub}>Manage clients & bookings</Text>
+              </View>
+              <Text style={styles.toolChevron}>›</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Sign out */}
         <TouchableOpacity style={styles.signOutBtn} onPress={handleLogout}>
           <Text style={styles.signOutText}>Sign Out</Text>
@@ -144,4 +184,12 @@ const styles = StyleSheet.create({
   statusText: { fontSize: 11, fontWeight: "700", color: Colors.foreground },
   signOutBtn: { margin: 20, borderRadius: 12, paddingVertical: 16, alignItems: "center", backgroundColor: "#fee2e2" },
   signOutText: { color: Colors.destructive, fontWeight: "700", fontSize: 16 },
+  toolRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.muted },
+  agentToolRow: { borderBottomWidth: 0 },
+  toolIconWrap: { width: 40, height: 40, borderRadius: 10, backgroundColor: Colors.surface, alignItems: "center", justifyContent: "center" },
+  toolIcon: { fontSize: 20 },
+  toolInfo: { flex: 1 },
+  toolLabel: { fontSize: 15, fontWeight: "600", color: Colors.foreground },
+  toolSub: { fontSize: 12, color: Colors.mutedForeground, marginTop: 1 },
+  toolChevron: { fontSize: 22, color: Colors.muted, fontWeight: "300" },
 });

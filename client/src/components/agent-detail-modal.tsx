@@ -1,6 +1,8 @@
+import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Star, MapPin, Globe, Heart, X, Award, TrendingUp, Clock, DollarSign } from "lucide-react";
 import type { Agent } from "@shared/schema";
 
@@ -29,13 +31,15 @@ function StarRow({ rating }: { rating: number }) {
   );
 }
 
-const SAMPLE_REVIEWS = [
-  { name: "Sarah M.", rating: 5, text: "Absolutely incredible experience. Helped us find our dream home in just 2 weeks!" },
-  { name: "James T.", rating: 5, text: "Professional, responsive, and genuinely cared about our needs. Highly recommend." },
-  { name: "Priya K.", rating: 4, text: "Great knowledge of the local market. Negotiated a fantastic price for us." },
-];
-
 export default function AgentDetailModal({ agent, onClose, onLike, onPass }: AgentDetailModalProps) {
+  const { data: reviews = [], isLoading: reviewsLoading } = useQuery<any[]>({
+    queryKey: [`/api/agents/${agent.id}/reviews`],
+    queryFn: async () => {
+      const res = await fetch(`/api/agents/${agent.id}/reviews`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-0 rounded-2xl">
@@ -162,18 +166,28 @@ export default function AgentDetailModal({ agent, onClose, onLike, onPass }: Age
             <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-1.5">
               <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
               Client Reviews
+              {reviews.length > 0 && <span className="text-muted-foreground font-normal">({reviews.length})</span>}
             </h3>
-            <div className="space-y-3">
-              {SAMPLE_REVIEWS.map((review, i) => (
-                <div key={i} className="p-3.5 rounded-xl bg-muted/40 border border-border">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-semibold text-foreground">{review.name}</span>
-                    <StarRow rating={review.rating} />
+            {reviewsLoading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-16 rounded-xl" />
+                <Skeleton className="h-16 rounded-xl" />
+              </div>
+            ) : reviews.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic">No reviews yet — be the first to leave one after working with this agent.</p>
+            ) : (
+              <div className="space-y-3">
+                {reviews.map((review: any) => (
+                  <div key={review.id} className="p-3.5 rounded-xl bg-muted/40 border border-border">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-semibold text-foreground">{review.userName || "Client"}</span>
+                      <StarRow rating={review.rating} />
+                    </div>
+                    {review.text && <p className="text-xs text-muted-foreground leading-relaxed">"{review.text}"</p>}
                   </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">"{review.text}"</p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Actions */}

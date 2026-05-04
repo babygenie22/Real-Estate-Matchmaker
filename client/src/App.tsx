@@ -12,6 +12,8 @@ import ChatPage from "@/pages/chat";
 import AdminPage from "@/pages/admin";
 import ProfilePage from "@/pages/profile";
 import NotificationsPage from "@/pages/notifications";
+import AgentRegisterPage from "@/pages/agent-register";
+import AgentPortalPage from "@/pages/agent-portal";
 import AppLayout from "@/components/app-layout";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -64,6 +66,14 @@ function Router() {
 
   if (location === "/onboarding") {
     return <OnboardingPage />;
+  }
+
+  if (location === "/agent-register") {
+    return <AgentRegisterPage />;
+  }
+
+  if (location === "/agent-portal") {
+    return <AgentPortalPage />;
   }
 
   return <AuthenticatedApp />;

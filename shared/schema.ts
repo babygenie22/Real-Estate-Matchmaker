@@ -20,7 +20,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  role: varchar("role").default("consumer"),
+  role: varchar("role").default("consumer"), // "consumer" | "agent" | "admin"
   location: varchar("location"),
   budget: varchar("budget"),
   propertyType: varchar("property_type"),
@@ -39,6 +39,10 @@ export const agents = pgTable("agents", {
   photo: varchar("photo"),
   bio: text("bio"),
   licenseNumber: varchar("license_number"),
+  phone: varchar("phone"),
+  website: varchar("website"),
+  linkedinUrl: varchar("linkedin_url"),
+  googlePlaceId: varchar("google_place_id"), // for real agents imported from Google Places
   specialties: text("specialties").array(),
   serviceAreas: text("service_areas").array(),
   languages: text("languages").array(),
@@ -83,7 +87,7 @@ export const messages = pgTable("messages", {
 export const notifications = pgTable("notifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
-  type: varchar("type").notNull(), // "match" | "message" | "booking"
+  type: varchar("type").notNull(), // "match" | "message" | "booking" | "booking_update"
   title: varchar("title").notNull(),
   body: text("body").notNull(),
   referenceId: varchar("reference_id"),
@@ -103,13 +107,31 @@ export const bookings = pgTable("bookings", {
   proposedDate: varchar("proposed_date").notNull(),
   proposedTime: varchar("proposed_time").notNull(),
   notes: text("notes"),
-  status: varchar("status").default("pending"),
+  status: varchar("status").default("pending"), // "pending" | "confirmed" | "declined" | "rescheduled"
+  agentNotes: text("agent_notes"),
+  confirmedDate: varchar("confirmed_date"),
+  confirmedTime: varchar("confirmed_time"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertBookingSchema = createInsertSchema(bookings).omit({ id: true, createdAt: true });
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
 export type Booking = typeof bookings.$inferSelect;
+
+// Reviews: clients leave reviews for agents after a match/booking
+export const reviews = pgTable("reviews", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  agentId: varchar("agent_id").notNull().references(() => agents.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  matchId: varchar("match_id").references(() => matches.id),
+  rating: integer("rating").notNull(), // 1-5
+  text: text("text"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, createdAt: true });
+export type InsertReview = z.infer<typeof insertReviewSchema>;
+export type Review = typeof reviews.$inferSelect;
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, passwordHash: true, createdAt: true, updatedAt: true });
 export const insertAgentSchema = createInsertSchema(agents).omit({ id: true, createdAt: true });

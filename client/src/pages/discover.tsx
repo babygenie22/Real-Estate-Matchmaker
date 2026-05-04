@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, SlidersHorizontal, X, CheckCircle, RefreshCw } from "lucide-react";
+import { Search, SlidersHorizontal, X, CheckCircle, RefreshCw, TrendingUp, ChevronDown, ChevronUp } from "lucide-react";
 import AgentCard from "@/components/agent-card";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -16,10 +16,76 @@ interface Filters {
   search: string;
   specialty: string;
   language: string;
+  zipCode: string;
+}
+
+const fmt = (n: number) => n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M` : `$${(n / 1000).toFixed(0)}K`;
+
+function MarketWidget({ zipCode }: { zipCode: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const { data, isLoading } = useQuery<any>({
+    queryKey: ["/api/market-data", zipCode],
+    queryFn: async () => {
+      const res = await fetch(`/api/market-data?zipCode=${zipCode}`, { credentials: "include" });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: zipCode.length === 5,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  if (!zipCode || zipCode.length !== 5) return null;
+  if (isLoading) return <div className="h-8 bg-muted animate-pulse rounded-xl mt-2" />;
+  if (!data) return null;
+
+  const change = data.monthOverMonthChange;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
+      className="mt-2"
+    >
+      <button
+        className="w-full flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-xl text-left"
+        onClick={() => setExpanded(v => !v)}
+      >
+        <TrendingUp className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+        <span className="text-xs font-medium text-blue-800 flex-1">
+          {data.city || zipCode} Market · Median {fmt(data.medianListPrice || 0)}
+          {change !== null && (
+            <span className={`ml-1.5 ${change >= 0 ? "text-green-600" : "text-red-500"}`}>
+              {change >= 0 ? "↑" : "↓"}{Math.abs(change).toFixed(1)}% MoM
+            </span>
+          )}
+        </span>
+        {expanded ? <ChevronUp className="w-3 h-3 text-blue-400" /> : <ChevronDown className="w-3 h-3 text-blue-400" />}
+      </button>
+      {expanded && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          className="grid grid-cols-4 gap-1.5 mt-1.5"
+        >
+          {[
+            { label: "List Price", value: fmt(data.medianListPrice || 0) },
+            { label: "Sale Price", value: fmt(data.medianSalePrice || 0) },
+            { label: "Days on Mkt", value: `${data.averageDaysOnMarket}d` },
+            { label: "Price/sqft", value: `$${data.pricePerSqft}` },
+          ].map(s => (
+            <div key={s.label} className="bg-white rounded-lg border border-blue-100 p-2 text-center">
+              <div className="text-xs font-bold text-foreground">{s.value}</div>
+              <div className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{s.label}</div>
+            </div>
+          ))}
+        </motion.div>
+      )}
+    </motion.div>
+  );
 }
 
 export default function DiscoverPage() {
-  const [filters, setFilters] = useState<Filters>({ search: "", specialty: "", language: "" });
+  const [filters, setFilters] = useState<Filters>({ search: "", specialty: "", language: "", zipCode: "" });
   const [showFilters, setShowFilters] = useState(false);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [matchAnimation, setMatchAnimation] = useState(false);
@@ -131,14 +197,22 @@ export default function DiscoverPage() {
                 <SelectItem value="Portuguese">Portuguese</SelectItem>
               </SelectContent>
             </Select>
-            {(filters.specialty || filters.language || filters.search) && (
-              <Button variant="ghost" size="sm" className="h-9 gap-1.5 text-xs text-muted-foreground" onClick={() => setFilters({ search: "", specialty: "", language: "" })}>
+            <Input
+              placeholder="ZIP code"
+              className="w-24 h-9 text-xs"
+              maxLength={5}
+              value={filters.zipCode}
+              onChange={e => setFilters(f => ({ ...f, zipCode: e.target.value.replace(/\D/g, "") }))}
+            />
+            {(filters.specialty || filters.language || filters.search || filters.zipCode) && (
+              <Button variant="ghost" size="sm" className="h-9 gap-1.5 text-xs text-muted-foreground" onClick={() => setFilters({ search: "", specialty: "", language: "", zipCode: "" })}>
                 <X className="w-3 h-3" />
                 Clear
               </Button>
             )}
           </motion.div>
         )}
+        <MarketWidget zipCode={filters.zipCode} />
       </div>
 
       <div className="flex-1 relative flex items-center justify-center overflow-hidden p-4">

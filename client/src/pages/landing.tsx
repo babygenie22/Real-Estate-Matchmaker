@@ -383,6 +383,9 @@ export default function LandingPage() {
             <span className="font-semibold text-foreground text-sm">HomeMatch</span>
           </div>
           <p className="text-xs text-muted-foreground">© 2026 HomeMatch. All rights reserved.</p>
+          <a href="/agent-register" className="text-xs text-primary font-medium hover:underline">
+            Are you a real estate agent? Join HomeMatch →
+          </a>
         </div>
       </footer>
 
