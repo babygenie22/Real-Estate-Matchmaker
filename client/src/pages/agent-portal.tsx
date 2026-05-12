@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -11,11 +11,10 @@ import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Home, Star, MessageSquare, Calendar, User, BarChart3,
-  CheckCircle, XCircle, Clock, ChevronRight, LogOut, Edit2,
+  CheckCircle, XCircle, Clock, LogOut, Edit2,
   Phone, Globe, Linkedin, MapPin, Award, Users, TrendingUp,
   AlertCircle, Save, X, MessageCircle,
 } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
 
 async function apiFetch(url: string, options?: RequestInit) {
   const res = await fetch(url, { headers: { "Content-Type": "application/json" }, credentials: "include", ...options });
@@ -55,9 +54,13 @@ function StatCard({ icon, label, value, sub, color = "blue" }: {
 export default function AgentPortalPage() {
   const [tab, setTab] = useState<Tab>("overview");
   const [, setLocation] = useLocation();
-  const { user, logout } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  async function handleLogout() {
+    await fetch("/api/logout", { method: "POST", credentials: "include" });
+    window.location.href = "/";
+  }
 
   // Booking decline/confirm state
   const [bookingAction, setBookingAction] = useState<{ id: string; mode: "confirm" | "decline" } | null>(null);
@@ -92,26 +95,27 @@ export default function AgentPortalPage() {
   const { data: profile, isLoading: profileLoading } = useQuery<any>({
     queryKey: ["/api/agent-portal/me"],
     queryFn: () => apiFetch("/api/agent-portal/me"),
-    onSuccess: (data: any) => {
-      if (!editingProfile) {
-        setProfileForm({
-          name: data.name || "",
-          phone: data.phone || "",
-          bio: data.bio || "",
-          photo: data.photo || "",
-          website: data.website || "",
-          linkedinUrl: data.linkedinUrl || "",
-          yearsExperience: data.yearsExperience || "",
-          specialties: data.specialties || [],
-          languages: data.languages || [],
-          serviceAreas: data.serviceAreas?.length ? data.serviceAreas : [""],
-          priceRangeMin: data.priceRangeMin || "",
-          priceRangeMax: data.priceRangeMax || "",
-        });
-      }
-    },
     retry: false,
   });
+
+  useEffect(() => {
+    if (profile && !editingProfile) {
+      setProfileForm({
+        name: profile.name || "",
+        phone: profile.phone || "",
+        bio: profile.bio || "",
+        photo: profile.photo || "",
+        website: profile.website || "",
+        linkedinUrl: profile.linkedinUrl || "",
+        yearsExperience: profile.yearsExperience || "",
+        specialties: profile.specialties || [],
+        languages: profile.languages || [],
+        serviceAreas: profile.serviceAreas?.length ? profile.serviceAreas : [""],
+        priceRangeMin: profile.priceRangeMin || "",
+        priceRangeMax: profile.priceRangeMax || "",
+      });
+    }
+  }, [profile]);
 
   const bookingMutation = useMutation({
     mutationFn: ({ id, body }: { id: string; body: any }) =>
@@ -178,7 +182,7 @@ export default function AgentPortalPage() {
                 <CheckCircle className="w-3 h-3" /> Approved
               </Badge>
             )}
-            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => logout()}>
+            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={handleLogout}>
               <LogOut className="w-4 h-4" />
             </Button>
           </div>

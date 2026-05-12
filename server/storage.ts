@@ -7,14 +7,24 @@ import {
   type Message, type InsertMessage, type Booking, type InsertBooking,
   type Notification, type Review, type InsertReview,
 } from "@shared/schema";
-import Expo from "expo-server-sdk";
-
-const expo = new Expo();
+// expo-server-sdk is loaded lazily to avoid blocking server startup
+let _expo: any = null;
+async function getExpo() {
+  if (!_expo) {
+    const { default: Expo } = await import("expo-server-sdk");
+    _expo = new Expo();
+    _expo.Expo = Expo;
+  }
+  return _expo;
+}
 
 export async function sendPushNotification(userId: string, title: string, body: string) {
   try {
     const [user] = await db.select().from(users).where(eq(users.id, userId));
-    if (!user?.expoPushToken || !Expo.isExpoPushToken(user.expoPushToken)) return;
+    if (!user?.expoPushToken) return;
+    const expo = await getExpo();
+    const { default: Expo } = await import("expo-server-sdk");
+    if (!Expo.isExpoPushToken(user.expoPushToken)) return;
     await expo.sendPushNotificationsAsync([{ to: user.expoPushToken, title, body, sound: "default" }]);
   } catch (err) {
     console.error("Push notification error:", err);

@@ -19,7 +19,10 @@ export default defineConfig({
   server: {
     fs: {
       strict: true,
-      deny: ["**/.*"],
+      allow: [
+        path.resolve(import.meta.dirname, "client"),
+        path.resolve(import.meta.dirname, "shared"),
+      ],
     },
   },
 });
