@@ -158,7 +158,7 @@ export default function OnboardingPage() {
               <div>
                 <input
                   type="text"
-                  placeholder="e.g. San Francisco, CA or 94102"
+                  placeholder="e.g. Ann Arbor, MI or 48103"
                   value={data.location}
                   onChange={(e) => setData(d => ({ ...d, location: e.target.value }))}
                   data-testid="input-location"

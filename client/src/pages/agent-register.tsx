@@ -194,7 +194,7 @@ export default function AgentRegisterPage() {
                   </div>
                   <div className="space-y-2 col-span-2">
                     <Label>Bio <span className="text-muted-foreground text-xs">(tell clients about yourself)</span></Label>
-                    <Textarea placeholder="I'm a licensed real estate agent with 10+ years helping families find their dream homes in the Bay Area..." rows={3} value={form.bio} onChange={e => set("bio", e.target.value)} />
+                    <Textarea placeholder="I'm a licensed Michigan real estate agent with 10+ years helping families find their dream homes across Metro Detroit and Southeast Michigan..." rows={3} value={form.bio} onChange={e => set("bio", e.target.value)} />
                   </div>
                 </div>
 
@@ -226,7 +226,7 @@ export default function AgentRegisterPage() {
                   {form.serviceAreas.map((area, i) => (
                     <div key={i} className="flex gap-2">
                       <Input
-                        placeholder="e.g. San Francisco, CA 94102"
+                        placeholder="e.g. Ann Arbor, MI 48103"
                         value={area}
                         onChange={e => {
                           const arr = [...form.serviceAreas];

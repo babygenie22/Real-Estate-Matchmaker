@@ -115,7 +115,7 @@ export async function registerRoutes(
       const agent = await storage.createAgent({
         name,
         photo,
-        bio: `Licensed real estate professional serving ${address}`,
+        bio: `Licensed Michigan real estate professional serving ${address}`,
         phone,
         website,
         googlePlaceId: placeId,

@@ -700,7 +700,7 @@ export default function AgentPortalPage() {
                           <Label className="text-xs">Service Areas</Label>
                           {(profileForm.serviceAreas as string[])?.map((area: string, i: number) => (
                             <div key={i} className="flex gap-2">
-                              <Input className="h-8 text-sm" placeholder="e.g. San Francisco, CA" value={area}
+                              <Input className="h-8 text-sm" placeholder="e.g. Ann Arbor, MI" value={area}
                                 onChange={e => { const arr = [...(profileForm.serviceAreas as string[])]; arr[i] = e.target.value; setProfileForm((f: any) => ({ ...f, serviceAreas: arr })); }} />
                               {(profileForm.serviceAreas as string[]).length > 1 && (
                                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setProfileForm((f: any) => ({ ...f, serviceAreas: (f.serviceAreas as string[]).filter((_: any, j: number) => j !== i) }))}>✕</Button>
