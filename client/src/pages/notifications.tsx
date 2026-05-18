@@ -46,7 +46,7 @@ export default function NotificationsPage() {
     return (
       <div className="p-4 space-y-3">
         {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-20 w-full rounded-xl" />
+          <Skeleton key={i} className="h-20 w-full rounded-2xl" />
         ))}
       </div>
     );
@@ -54,54 +54,61 @@ export default function NotificationsPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex-shrink-0 px-4 pt-4 pb-3 border-b border-border">
+      {/* Header */}
+      <div className="flex-shrink-0 px-4 pt-4 pb-3 bg-background">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-foreground">Notifications</h2>
-            <p className="text-sm text-muted-foreground">
-              {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
+            <h2 className="text-xl font-bold text-foreground tracking-tight">Notifications</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {unreadCount > 0 ? `${unreadCount} unread message${unreadCount !== 1 ? "s" : ""}` : "You're all caught up"}
             </p>
           </div>
-          {unreadCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-1.5 text-xs text-muted-foreground"
-              onClick={() => readAllMutation.mutate()}
-              disabled={readAllMutation.isPending}
-              data-testid="button-mark-all-read"
-            >
-              <CheckCheck className="w-3.5 h-3.5" />
-              Mark all read
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => readAllMutation.mutate()}
+                disabled={readAllMutation.isPending}
+                data-testid="button-mark-all-read"
+              >
+                <CheckCheck className="w-3.5 h-3.5" />
+                Mark all read
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto px-4 pb-4">
         {notifications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-4 text-center p-6">
-            <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center">
-              <Bell className="w-10 h-10 text-muted-foreground" />
+          <div className="flex flex-col items-center justify-center h-full gap-5 text-center pt-8">
+            <div className="w-24 h-24 bg-gradient-to-br from-muted to-muted/50 rounded-3xl flex items-center justify-center">
+              <Bell className="w-11 h-11 text-muted-foreground/50" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-foreground mb-1">No notifications</h3>
-              <p className="text-sm text-muted-foreground">Activity from matches, messages, and bookings will appear here.</p>
+              <h3 className="text-lg font-bold text-foreground mb-1.5">All quiet here</h3>
+              <p className="text-sm text-muted-foreground max-w-xs">Activity from matches, messages, and bookings will appear here.</p>
             </div>
           </div>
         ) : (
           <AnimatePresence initial={false}>
-            <div className="divide-y divide-border">
+            <div className="space-y-2 pt-1">
               {notifications.map((n) => {
                 const Icon = typeIcon[n.type] ?? Bell;
                 const colorClass = typeColor[n.type] ?? "bg-muted text-muted-foreground";
                 return (
                   <motion.div
                     key={n.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.2 }}
-                    className={`flex gap-3 px-4 py-4 cursor-pointer transition-colors hover:bg-muted/40 ${!n.read ? "bg-primary/10" : ""}`}
+                    className={`flex gap-3 p-3.5 rounded-2xl cursor-pointer transition-all border ${
+                      !n.read
+                        ? "bg-primary/5 border-primary/15 hover:bg-primary/8"
+                        : "bg-card border-border/60 hover:bg-muted/40"
+                    }`}
                     onClick={() => {
                       if (!n.read) readOneMutation.mutate(n.id);
                       if (n.type === "match" || n.type === "message") setLocation("/matches");
@@ -109,20 +116,18 @@ export default function NotificationsPage() {
                     }}
                     data-testid={`notification-${n.id}`}
                   >
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${colorClass}`}>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${colorClass}`}>
                       <Icon className="w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
-                        <p className={`text-sm font-semibold text-foreground leading-tight ${!n.read ? "text-foreground" : "text-foreground/80"}`}>
-                          {n.title}
-                        </p>
-                        {!n.read && (
-                          <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-1.5" />
-                        )}
+                        <p className="text-sm font-semibold text-foreground leading-tight">{n.title}</p>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          {!n.read && <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-0.5" />}
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{n.body}</p>
-                      <p className="text-xs text-muted-foreground/60 mt-1">
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-snug line-clamp-2">{n.body}</p>
+                      <p className="text-[10px] text-muted-foreground/50 mt-1.5">
                         {formatDistanceToNow(new Date(n.createdAt!), { addSuffix: true })}
                       </p>
                     </div>

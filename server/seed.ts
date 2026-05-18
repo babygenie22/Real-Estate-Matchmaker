@@ -119,6 +119,7 @@ export async function seedDatabase() {
         photo: agent.photo,
         bio: agent.bio,
         serviceAreas: agent.serviceAreas,
+        specialties: agent.specialties,
         licenseNumber: agent.licenseNumber,
         priceRangeMin: agent.priceRangeMin,
         priceRangeMax: agent.priceRangeMax,

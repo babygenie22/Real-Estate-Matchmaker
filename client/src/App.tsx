@@ -24,6 +24,13 @@ function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
   const [location, setLocation] = useLocation();
 
+  // All hooks must be called unconditionally before any early returns
+  useEffect(() => {
+    if (isAuthenticated && user && !user.onboardingCompleted && location !== "/onboarding") {
+      setLocation("/onboarding");
+    }
+  }, [isAuthenticated, user, location, setLocation]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -40,12 +47,6 @@ function AuthenticatedApp() {
   if (!isAuthenticated) {
     return <LandingPage />;
   }
-
-  useEffect(() => {
-    if (user && !user.onboardingCompleted && location !== "/onboarding") {
-      setLocation("/onboarding");
-    }
-  }, [user, location, setLocation]);
 
   if (user && !user.onboardingCompleted && location !== "/onboarding") return null;
 

@@ -2,10 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MessageSquare, Star, MapPin, Heart } from "lucide-react";
+import { MessageSquare, Star, MapPin, Heart, ChevronRight } from "lucide-react";
 import type { Agent, Match } from "@shared/schema";
 
 type MatchWithAgent = Match & { agent: Agent };
@@ -21,7 +20,7 @@ export default function MatchesPage() {
     return (
       <div className="p-4 space-y-3">
         {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-24 w-full rounded-xl" />
+          <Skeleton key={i} className="h-28 w-full rounded-2xl" />
         ))}
       </div>
     );
@@ -29,13 +28,13 @@ export default function MatchesPage() {
 
   if (matches.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 text-center p-6">
-        <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
-          <Heart className="w-10 h-10 text-primary" />
+      <div className="flex flex-col items-center justify-center h-full gap-5 text-center p-8">
+        <div className="w-24 h-24 bg-gradient-to-br from-primary/20 to-primary/5 rounded-3xl flex items-center justify-center">
+          <Heart className="w-11 h-11 text-primary" />
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-foreground mb-1">No matches yet</h3>
-          <p className="text-sm text-muted-foreground">Like agents in the Discover tab to create matches and unlock messaging.</p>
+          <h3 className="text-lg font-bold text-foreground mb-1.5">No matches yet</h3>
+          <p className="text-sm text-muted-foreground max-w-xs">Swipe right on agents in Discover to create matches and unlock messaging.</p>
         </div>
       </div>
     );
@@ -43,11 +42,20 @@ export default function MatchesPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex-shrink-0 px-4 pt-4 pb-3 border-b border-border">
-        <h2 className="text-lg font-bold text-foreground">Your Matches</h2>
-        <p className="text-sm text-muted-foreground">{matches.length} agent{matches.length !== 1 ? "s" : ""} matched</p>
+      {/* Page header */}
+      <div className="flex-shrink-0 px-4 pt-4 pb-3 bg-background">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-foreground tracking-tight">Your Matches</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">{matches.length} agent{matches.length !== 1 ? "s" : ""} ready to chat</p>
+          </div>
+          <div className="w-9 h-9 bg-primary/10 rounded-xl flex items-center justify-center">
+            <Heart className="w-4.5 h-4.5 text-primary fill-primary/30" />
+          </div>
+        </div>
       </div>
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+
+      <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3 pt-2">
         {matches.map((match) => (
           <MatchCard
             key={match.id}
@@ -63,39 +71,69 @@ export default function MatchesPage() {
 function MatchCard({ match, onMessage }: { match: MatchWithAgent; onMessage: () => void }) {
   const agent = match.agent;
   return (
-    <Card className="hover-elevate cursor-pointer shadow-xs transition-shadow hover:shadow-md" onClick={onMessage} data-testid={`card-match-${match.id}`}>
-      <CardContent className="p-4 flex items-center gap-4">
-        <Avatar className="w-14 h-14 flex-shrink-0 ring-2 ring-primary/15 ring-offset-1">
+    <div
+      className="group relative overflow-hidden rounded-2xl bg-card border border-border shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer active:scale-[0.99]"
+      onClick={onMessage}
+      data-testid={`card-match-${match.id}`}
+    >
+      <div className="flex items-stretch">
+        {/* Photo strip */}
+        <div className="w-24 flex-shrink-0 relative overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5">
           {agent.photo ? (
-            <AvatarImage src={agent.photo} alt={agent.name} />
-          ) : null}
-          <AvatarFallback className="text-lg font-bold text-primary bg-primary/10">
-            {agent.name.split(" ").map(n => n[0]).join("")}
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-semibold text-foreground text-sm">{agent.name}</h3>
-            <div className="flex items-center gap-1 bg-yellow-500/15 rounded-full px-1.5 py-0.5">
-              <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-              <span className="text-xs font-semibold text-yellow-500">{agent.rating?.toFixed(1)}</span>
+            <img
+              src={agent.photo}
+              alt={agent.name}
+              className="w-full h-full object-cover object-top"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <span className="text-2xl font-black text-primary/60">
+                {agent.name.split(" ").map(n => n[0]).join("")}
+              </span>
+            </div>
+          )}
+          {/* Online dot indicator */}
+          <div className="absolute bottom-2 right-2 w-3 h-3 bg-green-400 rounded-full border-2 border-card shadow-sm" />
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 px-3.5 py-3 flex flex-col justify-between min-w-0">
+          <div>
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="font-bold text-foreground text-[15px] leading-tight">{agent.name}</h3>
+              <div className="flex items-center gap-0.5 flex-shrink-0 mt-0.5">
+                <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                <span className="text-xs font-bold text-foreground">{agent.rating?.toFixed(1)}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 mt-1">
+              <MapPin className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+              <span className="text-xs text-muted-foreground truncate">{agent.serviceAreas?.slice(0, 2).join(", ")}</span>
             </div>
           </div>
-          <div className="flex items-center gap-1 mt-0.5">
-            <MapPin className="w-3 h-3 text-muted-foreground" />
-            <p className="text-xs text-muted-foreground truncate">{agent.serviceAreas?.slice(0, 2).join(", ")}</p>
-          </div>
-          <div className="flex gap-1.5 mt-2 flex-wrap">
-            {agent.specialties?.slice(0, 2).map((s) => (
-              <Badge key={s} variant="secondary" className="text-xs py-0 bg-primary/10 text-primary border-primary/20">{s}</Badge>
-            ))}
+
+          <div className="flex items-center justify-between mt-2.5">
+            <div className="flex gap-1.5 flex-wrap">
+              {agent.specialties?.slice(0, 2).map((s) => (
+                <span key={s} className="text-[10px] font-medium text-primary bg-primary/8 px-2 py-0.5 rounded-full">{s}</span>
+              ))}
+            </div>
+            <button
+              className="flex items-center gap-1 text-xs font-semibold text-primary bg-primary/8 hover:bg-primary/15 px-3 py-1.5 rounded-xl transition-colors"
+              onClick={(e) => { e.stopPropagation(); onMessage(); }}
+              data-testid={`button-message-${match.id}`}
+            >
+              <MessageSquare className="w-3 h-3" />
+              Chat
+            </button>
           </div>
         </div>
-        <Button size="sm" className="gap-1.5 flex-shrink-0 shadow-xs" onClick={(e) => { e.stopPropagation(); onMessage(); }} data-testid={`button-message-${match.id}`}>
-          <MessageSquare className="w-3.5 h-3.5" />
-          Chat
-        </Button>
-      </CardContent>
-    </Card>
+
+        {/* Right chevron */}
+        <div className="flex items-center pr-2">
+          <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+        </div>
+      </div>
+    </div>
   );
 }

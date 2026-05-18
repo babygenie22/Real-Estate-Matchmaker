@@ -143,7 +143,7 @@ export default function DiscoverPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex-shrink-0 px-4 pt-4 pb-3 border-b border-border bg-background">
+      <div className="flex-shrink-0 px-4 pt-3 pb-3 border-b border-border/60 bg-background">
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -245,15 +245,15 @@ export default function DiscoverPage() {
             <Skeleton className="w-full aspect-[3/4] rounded-xl" />
           </div>
         ) : visibleAgents.length === 0 ? (
-          <div className="flex flex-col items-center gap-4 text-center max-w-xs">
-            <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center">
-              <Search className="w-10 h-10 text-muted-foreground" />
+          <div className="flex flex-col items-center gap-5 text-center max-w-xs">
+            <div className="w-28 h-28 bg-gradient-to-br from-primary/15 to-primary/5 rounded-3xl flex items-center justify-center border border-primary/10">
+              <Search className="w-12 h-12 text-primary/40" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-foreground mb-1">No more agents</h3>
-              <p className="text-sm text-muted-foreground">You've seen all available agents. Reset to see them again.</p>
+              <h3 className="text-xl font-bold text-foreground mb-2">You've seen them all!</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">You've browsed all available Michigan agents. Reset your deck to rediscover great matches.</p>
             </div>
-            <Button onClick={handleReset} className="gap-2" data-testid="button-reset-discover">
+            <Button onClick={handleReset} className="gap-2 rounded-xl px-6 shadow-sm" data-testid="button-reset-discover">
               <RefreshCw className="w-4 h-4" />
               Reset Deck
             </Button>

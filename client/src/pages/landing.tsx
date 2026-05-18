@@ -239,7 +239,7 @@ export default function LandingPage() {
               <span className="text-primary"> Dream Agent</span>
             </motion.h1>
             <motion.p variants={fadeUp} className="text-xl text-muted-foreground leading-relaxed mb-10 max-w-2xl">
-              HomeMatch uses intelligent matching to connect you with top-rated real estate agents based on your preferences, budget, and local expertise. Like Tinder — but for finding your perfect real estate partner.
+              HomeMatch uses intelligent matching to connect you with top-rated real estate agents based on your preferences, budget, and local expertise, focused on Michigan's most trusted agents. Like Tinder — but for finding your perfect real estate partner.
             </motion.p>
             <motion.div variants={fadeUp} className="flex flex-wrap gap-4">
               <Button size="lg" className="gap-2 shadow-md" onClick={openRegister} data-testid="link-cta-primary">
@@ -383,9 +383,12 @@ export default function LandingPage() {
             <span className="font-semibold text-foreground text-sm">HomeMatch</span>
           </div>
           <p className="text-xs text-muted-foreground">© 2026 HomeMatch. All rights reserved.</p>
-          <a href="/agent-register" className="text-xs text-primary font-medium hover:underline">
-            Are you a real estate agent? Join HomeMatch →
-          </a>
+          <div className="flex flex-col items-end gap-0.5">
+            <a href="/agent-register" className="text-xs text-primary font-medium hover:underline">
+              Are you a real estate agent? Join HomeMatch →
+            </a>
+            <span className="text-[10px] text-muted-foreground">Serving Southeast Michigan</span>
+          </div>
         </div>
       </footer>
 
