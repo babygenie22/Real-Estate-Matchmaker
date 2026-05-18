@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -40,10 +41,13 @@ function AuthenticatedApp() {
     return <LandingPage />;
   }
 
-  if (user && !user.onboardingCompleted && location !== "/onboarding") {
-    setLocation("/onboarding");
-    return null;
-  }
+  useEffect(() => {
+    if (user && !user.onboardingCompleted && location !== "/onboarding") {
+      setLocation("/onboarding");
+    }
+  }, [user, location, setLocation]);
+
+  if (user && !user.onboardingCompleted && location !== "/onboarding") return null;
 
   return (
     <AppLayout>
@@ -52,7 +56,7 @@ function AuthenticatedApp() {
         <Route path="/discover" component={DiscoverPage} />
         <Route path="/matches" component={MatchesPage} />
         <Route path="/chat/:matchId" component={ChatPage} />
-        <Route path="/admin" component={AdminPage} />
+        <Route path="/admin" component={() => user?.role === "admin" ? <AdminPage /> : <NotFound />} />
         <Route path="/notifications" component={NotificationsPage} />
         <Route path="/profile" component={ProfilePage} />
         <Route component={NotFound} />

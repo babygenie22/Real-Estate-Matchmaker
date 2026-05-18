@@ -48,7 +48,7 @@ export default function AgentCard({ agent, onLike, onPass, isTop }: AgentCardPro
         onDragEnd={handleDragEnd}
         data-testid={`card-agent-${agent.id}`}
       >
-        <div className="relative h-full rounded-2xl overflow-hidden shadow-xl bg-card border border-card-border">
+        <div className="relative h-full rounded-2xl overflow-hidden shadow-xl bg-card border border-border">
           {agent.photo ? (
             <img
               src={agent.photo}
@@ -88,6 +88,7 @@ export default function AgentCard({ agent, onLike, onPass, isTop }: AgentCardPro
           <button
             onClick={(e) => { e.stopPropagation(); if (!isDragging) setShowDetail(true); }}
             data-testid={`button-detail-${agent.id}`}
+            aria-label="View agent details"
             className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center text-white border border-white/20 hover:bg-black/50 transition-colors z-10"
           >
             <Info className="w-4 h-4" />

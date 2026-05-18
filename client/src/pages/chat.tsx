@@ -10,19 +10,10 @@ import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import type { Agent, Match, Message } from "@shared/schema";
-import { io, Socket } from "socket.io-client";
+import { io } from "socket.io-client";
 import { format } from "date-fns";
 
 type MatchWithAgent = Match & { agent: Agent };
-
-let socket: Socket | null = null;
-
-const getSocket = () => {
-  if (!socket) {
-    socket = io(window.location.origin, { withCredentials: true });
-  }
-  return socket;
-};
 
 export default function ChatPage() {
   const { matchId } = useParams<{ matchId: string }>();
@@ -31,6 +22,7 @@ export default function ChatPage() {
   const [content, setContent] = useState("");
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const initializedRef = useRef(false);
   const { toast } = useToast();
 
   const { data: matches = [], isLoading: matchesLoading } = useQuery<MatchWithAgent[]>({
@@ -42,10 +34,10 @@ export default function ChatPage() {
 
   // Redirect if matches loaded but this matchId doesn't belong to the user
   useEffect(() => {
-    if (!matchesLoading && matches.length > 0 && !match) {
+    if (!matchesLoading && !match) {
       setLocation("/matches");
     }
-  }, [matchesLoading, matches, match, setLocation]);
+  }, [matchesLoading, match, setLocation]);
 
   const { data: messages = [], isLoading } = useQuery<Message[]>({
     queryKey: ["/api/matches", matchId, "messages"],
@@ -57,15 +49,20 @@ export default function ChatPage() {
     enabled: !!matchId,
   });
 
+  // Initialize local messages from server only once
   useEffect(() => {
-    setLocalMessages(messages);
+    if (messages.length > 0 && !initializedRef.current) {
+      initializedRef.current = true;
+      setLocalMessages(messages);
+    }
   }, [messages]);
 
+  // Socket connection — per matchId, cleaned up on unmount
   useEffect(() => {
-    const s = getSocket();
+    const s = io(window.location.origin, { withCredentials: true });
     s.emit("join-match", matchId);
 
-    s.on("new-message", (msg: Message) => {
+    const handler = (msg: Message) => {
       if (msg.matchId === matchId && msg.senderType !== "user") {
         setLocalMessages(prev => {
           const exists = prev.find(m => m.id === msg.id);
@@ -73,10 +70,13 @@ export default function ChatPage() {
           return [...prev, msg];
         });
       }
-    });
+    };
+
+    s.on("new-message", handler);
 
     return () => {
-      s.off("new-message");
+      s.off("new-message", handler);
+      s.disconnect();
     };
   }, [matchId]);
 
@@ -109,7 +109,7 @@ export default function ChatPage() {
   });
 
   const handleSend = () => {
-    if (!content.trim()) return;
+    if (!content.trim() || !user) return;
     const text = content.trim();
     setContent("");
 

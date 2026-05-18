@@ -76,9 +76,9 @@ function MatchCard({ match, onMessage }: { match: MatchWithAgent; onMessage: () 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-semibold text-foreground text-sm">{agent.name}</h3>
-            <div className="flex items-center gap-1 bg-yellow-50 rounded-full px-1.5 py-0.5">
+            <div className="flex items-center gap-1 bg-yellow-500/15 rounded-full px-1.5 py-0.5">
               <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-              <span className="text-xs font-semibold text-yellow-700">{agent.rating?.toFixed(1)}</span>
+              <span className="text-xs font-semibold text-yellow-500">{agent.rating?.toFixed(1)}</span>
             </div>
           </div>
           <div className="flex items-center gap-1 mt-0.5">

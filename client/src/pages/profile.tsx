@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,16 +10,30 @@ import type { Agent, Match } from "@shared/schema";
 
 type MatchWithAgent = Match & { agent: Agent };
 
+const formatBudget = (v: any) => {
+  const n = Number(v);
+  if (!v || isNaN(n)) return v;
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+  return `$${n.toLocaleString()}`;
+};
+
 export default function ProfilePage() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const { data: matches = [] } = useQuery<MatchWithAgent[]>({
     queryKey: ["/api/matches"],
   });
 
+  const logoutMutation = useMutation({
+    mutationFn: () => fetch("/api/auth/logout", { method: "POST", credentials: "include" }).then(r => r.json()),
+    onSuccess: () => { queryClient.clear(); window.location.href = "/"; },
+  });
+
   const profileFields = [
     { icon: MapPin, label: "Location", value: user?.location },
-    { icon: DollarSign, label: "Budget", value: user?.budget },
+    { icon: DollarSign, label: "Budget", value: formatBudget(user?.budget) },
     { icon: Building, label: "Property Type", value: user?.propertyType },
     { icon: Heart, label: "Preferred Style", value: user?.preferredStyle },
     { icon: MessageSquare, label: "Communication", value: user?.communicationStyle },
@@ -111,17 +124,18 @@ export default function ProfilePage() {
 
         <Card className="shadow-sm overflow-hidden">
           <CardContent className="p-0">
-            <a
-              href="/api/logout"
-              className="flex items-center gap-3 px-5 py-4 text-destructive hover:bg-destructive/5 transition-colors rounded-lg"
-              data-testid="link-logout"
+            <button
+              onClick={() => logoutMutation.mutate()}
+              disabled={logoutMutation.isPending}
+              className="w-full flex items-center gap-3 px-5 py-4 text-destructive hover:bg-destructive/5 transition-colors rounded-lg disabled:opacity-60"
+              data-testid="button-logout"
             >
               <div className="w-8 h-8 bg-destructive/10 rounded-lg flex items-center justify-center">
                 <LogOut className="w-4 h-4 text-destructive" />
               </div>
               <span className="text-sm font-semibold">Sign Out</span>
               <ChevronRight className="w-4 h-4 ml-auto text-muted-foreground" />
-            </a>
+            </button>
           </CardContent>
         </Card>
       </div>

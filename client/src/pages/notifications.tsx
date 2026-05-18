@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Bell, Heart, MessageSquare, Calendar, CheckCheck, CheckCircle } from "lucide-react";
@@ -15,14 +16,15 @@ const typeIcon: Record<string, React.ElementType> = {
 };
 
 const typeColor: Record<string, string> = {
-  match: "bg-green-100 text-green-600",
-  message: "bg-blue-100 text-blue-600",
-  booking: "bg-amber-100 text-amber-600",
-  booking_update: "bg-emerald-100 text-emerald-600",
+  match: "bg-green-500/15 text-green-500",
+  message: "bg-blue-500/15 text-blue-500",
+  booking: "bg-amber-500/15 text-amber-500",
+  booking_update: "bg-emerald-500/15 text-emerald-500",
 };
 
 export default function NotificationsPage() {
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   const { data: notifications = [], isLoading } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
@@ -100,7 +102,11 @@ export default function NotificationsPage() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.2 }}
                     className={`flex gap-3 px-4 py-4 cursor-pointer transition-colors hover:bg-muted/40 ${!n.read ? "bg-primary/10" : ""}`}
-                    onClick={() => !n.read && readOneMutation.mutate(n.id)}
+                    onClick={() => {
+                      if (!n.read) readOneMutation.mutate(n.id);
+                      if (n.type === "match" || n.type === "message") setLocation("/matches");
+                      else if (n.type === "booking" || n.type === "booking_update") setLocation("/profile");
+                    }}
                     data-testid={`notification-${n.id}`}
                   >
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${colorClass}`}>

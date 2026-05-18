@@ -33,7 +33,7 @@ function AuthDialog({ open, onClose, defaultTab }: { open: boolean; onClose: () 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       onClose();
-      window.location.reload();
+      // login success: cache invalidation drives re-render
     },
     onError: (err: Error) => toast({ title: "Login failed", description: err.message, variant: "destructive" }),
   });
@@ -43,7 +43,7 @@ function AuthDialog({ open, onClose, defaultTab }: { open: boolean; onClose: () 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       onClose();
-      window.location.reload();
+      // login success: cache invalidation drives re-render
     },
     onError: (err: Error) => toast({ title: "Registration failed", description: err.message, variant: "destructive" }),
   });
@@ -217,7 +217,7 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-background to-background" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-background" />
         <div className="absolute top-16 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-10 w-80 h-80 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
 
@@ -339,7 +339,7 @@ export default function LandingPage() {
                 key={feature.title}
                 variants={fadeUp}
                 custom={i}
-                className="flex gap-4 p-6 rounded-xl bg-card border border-card-border shadow-xs hover:shadow-md transition-shadow duration-300"
+                className="flex gap-4 p-6 rounded-xl bg-card border border-border shadow-xs hover:shadow-md transition-shadow duration-300"
                 data-testid={`feature-${feature.title.toLowerCase().replace(/ /g, "-")}`}
               >
                 <div className="w-11 h-11 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-xs">

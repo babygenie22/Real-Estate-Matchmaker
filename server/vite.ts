@@ -22,9 +22,9 @@ export async function setupVite(server: Server, app: Express) {
     configFile: false,
     customLogger: {
       ...viteLogger,
+      // Don't kill the server on non-fatal Vite errors
       error: (msg, options) => {
         viteLogger.error(msg, options);
-        process.exit(1);
       },
     },
     server: serverOptions,
@@ -33,7 +33,9 @@ export async function setupVite(server: Server, app: Express) {
 
   app.use(vite.middlewares);
 
-  // Serve index.html for all non-API routes; Vite middleware handles module transforms
+  // Serve index.html for all non-API routes.
+  // transformIndexHtml is required so @vitejs/plugin-react can inject its
+  // Fast Refresh preamble — without it the app fails to mount.
   app.use("/{*path}", async (req, res, next) => {
     try {
       const clientTemplate = path.resolve(
@@ -48,8 +50,12 @@ export async function setupVite(server: Server, app: Express) {
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`,
       );
-      res.status(200).set({ "Content-Type": "text/html" }).end(template);
+      // Let Vite inject the React Fast Refresh preamble and other transforms
+      const page = await vite.transformIndexHtml(req.originalUrl, template);
+      res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
+      // Vite stack traces show in the browser overlay — pass through
+      vite.ssrFixStacktrace(e as Error);
       next(e);
     }
   });

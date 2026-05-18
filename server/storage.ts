@@ -49,7 +49,7 @@ export interface IStorage {
   getAgent(id: string): Promise<Agent | undefined>;
   createAgent(agent: InsertAgent): Promise<Agent>;
   updateAgent(id: string, agent: Partial<InsertAgent>): Promise<Agent>;
-  getScoredAgents(userId: string): Promise<Agent[]>;
+  getScoredAgents(userId: string, filters?: AgentFilters): Promise<Agent[]>;
   getAgentByUserId(userId: string): Promise<Agent | undefined>;
 
   createLike(like: InsertLike): Promise<Like>;
@@ -68,6 +68,7 @@ export interface IStorage {
   approveAgent(id: string): Promise<void>;
 
   createBooking(booking: InsertBooking): Promise<Booking>;
+  getBooking(id: string): Promise<Booking | undefined>;
   getBookingsByUser(userId: string): Promise<(Booking & { agent: Agent })[]>;
   getBookingsByAgent(agentId: string): Promise<(Booking & { user: User })[]>;
   updateBookingStatus(id: string, status: string, agentNotes?: string, confirmedDate?: string, confirmedTime?: string): Promise<Booking>;
@@ -178,9 +179,9 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  async getScoredAgents(userId: string): Promise<Agent[]> {
+  async getScoredAgents(userId: string, filters?: AgentFilters): Promise<Agent[]> {
     const user = await this.getUser(userId);
-    const allAgents = await this.getAgents(undefined, userId);
+    const allAgents = await this.getAgents(filters, userId);
 
     return allAgents.sort((a, b) => {
       let scoreA = 0, scoreB = 0;
@@ -293,7 +294,9 @@ export class DatabaseStorage implements IStorage {
           }
         }
       }
-    } catch {}
+    } catch (err) {
+      console.error("createMessage side-effect error:", err);
+    }
     return created;
   }
 
@@ -339,6 +342,11 @@ export class DatabaseStorage implements IStorage {
     }
 
     return created;
+  }
+
+  async getBooking(id: string): Promise<Booking | undefined> {
+    const [b] = await db.select().from(bookings).where(eq(bookings.id, id));
+    return b;
   }
 
   async getBookingsByUser(userId: string): Promise<(Booking & { agent: Agent })[]> {

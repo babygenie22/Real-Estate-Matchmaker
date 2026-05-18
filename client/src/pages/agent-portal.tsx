@@ -143,10 +143,10 @@ function StatCard({ icon, label, value, sub, color = "blue" }: {
   icon: React.ReactNode; label: string; value: string | number; sub?: string; color?: string;
 }) {
   const colors: Record<string, string> = {
-    blue: "bg-blue-50 text-blue-600",
-    green: "bg-green-50 text-green-600",
-    amber: "bg-amber-50 text-amber-600",
-    purple: "bg-purple-50 text-purple-600",
+    blue: "bg-blue-500/15 text-blue-500",
+    green: "bg-green-500/15 text-green-500",
+    amber: "bg-amber-500/15 text-amber-500",
+    purple: "bg-purple-500/15 text-purple-500",
   };
   return (
     <div className="bg-card border border-border rounded-2xl p-4 flex items-center gap-3 shadow-sm">
@@ -170,11 +170,11 @@ export default function AgentPortalPage() {
 
   // Inline chat — agent portal navigates to /agent-portal/chat/:matchId
   const chatMatchId = location.startsWith("/agent-portal/chat/")
-    ? location.replace("/agent-portal/chat/", "")
+    ? location.slice("/agent-portal/chat/".length).split("?")[0]
     : null;
 
   async function handleLogout() {
-    await fetch("/api/logout", { method: "POST", credentials: "include" });
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
     window.location.href = "/";
   }
 
@@ -231,7 +231,7 @@ export default function AgentPortalPage() {
         priceRangeMax: profile.priceRangeMax || "",
       });
     }
-  }, [profile]);
+  }, [profile, editingProfile]);
 
   const bookingMutation = useMutation({
     mutationFn: ({ id, body }: { id: string; body: any }) =>
@@ -294,12 +294,12 @@ export default function AgentPortalPage() {
           </div>
           <div className="flex items-center gap-2">
             {stats && !stats.isApproved && (
-              <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 gap-1 text-xs">
+              <Badge variant="outline" className="text-amber-500 border-amber-500/30 bg-amber-500/10 gap-1 text-xs">
                 <AlertCircle className="w-3 h-3" /> Pending Approval
               </Badge>
             )}
             {stats?.isApproved && (
-              <Badge className="bg-green-500 text-white gap-1 text-xs">
+              <Badge className="bg-green-500/15 text-green-500 border-green-500/30 gap-1 text-xs">
                 <CheckCircle className="w-3 h-3" /> Approved
               </Badge>
             )}
@@ -374,14 +374,14 @@ export default function AgentPortalPage() {
                 ) : null}
 
                 {pendingBookings.length > 0 && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4">
                     <div className="flex items-center gap-2 mb-3">
-                      <Clock className="w-4 h-4 text-amber-600" />
-                      <span className="font-semibold text-amber-800 text-sm">Action Required</span>
+                      <Clock className="w-4 h-4 text-amber-500" />
+                      <span className="font-semibold text-amber-500 text-sm">Action Required</span>
                     </div>
                     <div className="space-y-2">
                       {pendingBookings.slice(0, 3).map((b: any) => (
-                        <div key={b.id} className="flex items-center justify-between bg-white rounded-xl px-3 py-2 border border-amber-100">
+                        <div key={b.id} className="flex items-center justify-between bg-card rounded-xl px-3 py-2 border border-border">
                           <div>
                             <div className="text-sm font-medium text-foreground">{b.userName || "Client"}</div>
                             <div className="text-xs text-muted-foreground">{b.proposedDate} · {b.proposedTime}</div>
@@ -393,7 +393,7 @@ export default function AgentPortalPage() {
                       ))}
                     </div>
                     {pendingBookings.length > 3 && (
-                      <button onClick={() => setTab("bookings")} className="text-xs text-amber-700 font-medium mt-2 hover:underline">
+                      <button onClick={() => setTab("bookings")} className="text-xs text-amber-500 font-medium mt-2 hover:underline">
                         +{pendingBookings.length - 3} more →
                       </button>
                     )}
@@ -481,10 +481,10 @@ export default function AgentPortalPage() {
                   bookings.map((b: any) => {
                     const isActive = bookingAction?.id === b.id;
                     const statusColors: Record<string, string> = {
-                      pending: "text-amber-600 bg-amber-50 border-amber-200",
-                      confirmed: "text-green-600 bg-green-50 border-green-200",
-                      declined: "text-red-600 bg-red-50 border-red-200",
-                      rescheduled: "text-blue-600 bg-blue-50 border-blue-200",
+                      pending: "text-amber-500 bg-amber-500/15 border-amber-500/30",
+                      confirmed: "text-green-500 bg-green-500/15 border-green-500/30",
+                      declined: "text-red-500 bg-red-500/15 border-red-500/30",
+                      rescheduled: "text-blue-500 bg-blue-500/15 border-blue-500/30",
                     };
                     return (
                       <div key={b.id} className="bg-card border border-border rounded-2xl p-4 shadow-sm">
@@ -635,8 +635,8 @@ export default function AgentPortalPage() {
                         {profile.bio && <p className="text-sm text-muted-foreground">{profile.bio}</p>}
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           {profile.phone && <div className="flex items-center gap-1.5 text-muted-foreground"><Phone className="w-3.5 h-3.5" />{profile.phone}</div>}
-                          {profile.website && <div className="flex items-center gap-1.5 text-muted-foreground"><Globe className="w-3.5 h-3.5" /><a href={profile.website} target="_blank" className="text-primary hover:underline truncate">Website</a></div>}
-                          {profile.linkedinUrl && <div className="flex items-center gap-1.5 text-muted-foreground"><Linkedin className="w-3.5 h-3.5" /><a href={profile.linkedinUrl} target="_blank" className="text-primary hover:underline">LinkedIn</a></div>}
+                          {profile.website && <div className="flex items-center gap-1.5 text-muted-foreground"><Globe className="w-3.5 h-3.5" /><a href={profile.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">Website</a></div>}
+                          {profile.linkedinUrl && <div className="flex items-center gap-1.5 text-muted-foreground"><Linkedin className="w-3.5 h-3.5" /><a href={profile.linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">LinkedIn</a></div>}
                         </div>
                         {profile.serviceAreas?.length > 0 && (
                           <div>

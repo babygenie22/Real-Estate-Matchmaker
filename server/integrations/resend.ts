@@ -10,6 +10,10 @@
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = process.env.FROM_EMAIL || "HomeMatch <noreply@homematch.app>";
 
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 async function sendEmail(to: string, subject: string, html: string): Promise<void> {
   if (!RESEND_API_KEY) {
     console.log(`[Email skipped – no RESEND_API_KEY] To: ${to} | Subject: ${subject}`);
@@ -104,7 +108,7 @@ export async function sendBookingDeclinedEmail(
   await sendEmail(to, `Booking update from ${agentName}`, baseTemplate(`
     <p>Hi ${userName || "there"},</p>
     <p>Unfortunately, <strong>${agentName}</strong> is unable to meet at the requested time.</p>
-    ${reason ? `<div class="highlight"><strong>Reason:</strong> ${reason}</div>` : ""}
+    ${reason ? `<div class="highlight"><strong>Reason:</strong> ${escapeHtml(reason)}</div>` : ""}
     <p>Don't worry — you can request a new time or connect with other matched agents.</p>
     <a href="${process.env.APP_URL || "http://localhost:3001"}/matches" class="btn">Find Another Time →</a>
   `));
@@ -119,7 +123,7 @@ export async function sendNewMessageEmail(
   await sendEmail(to, `💬 New message from ${agentName}`, baseTemplate(`
     <p>Hi ${userName || "there"},</p>
     <p><strong>${agentName}</strong> sent you a message:</p>
-    <div class="highlight">"${messagePreview}"</div>
+    <div class="highlight">"${escapeHtml(messagePreview)}"</div>
     <a href="${process.env.APP_URL || "http://localhost:3001"}/matches" class="btn">Reply Now →</a>
   `));
 }

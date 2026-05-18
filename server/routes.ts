@@ -39,25 +39,24 @@ export async function registerRoutes(
   });
 
   io.on("connection", (socket) => {
-    socket.on("join-match", (matchId: string) => socket.join(`match-${matchId}`));
-
-    // Note: senderId/senderType are intentionally ignored here; REST endpoints
-    // (/api/messages and /api/agent-portal/messages) are the authoritative write
-    // path that enforces auth. This socket handler is kept for real-time delivery only.
-    socket.on("send-message", async (data: { matchId: string; content: string; senderId: string; senderType: string }) => {
+    // Verify ownership before allowing a socket to subscribe to a match room
+    socket.on("join-match", async (matchId: string) => {
       try {
-        if (!data.matchId || !data.content?.trim()) return;
-        const msg = await storage.createMessage({
-          matchId: data.matchId,
-          senderId: data.senderId,
-          senderType: data.senderType,
-          content: data.content,
-        });
-        io.to(`match-${data.matchId}`).emit("new-message", msg);
-      } catch (err) {
-        console.error("Socket message error:", err);
+        const userId = (socket.request as any).session?.passport?.user;
+        if (!userId) return;
+        const match = await storage.getMatch(matchId);
+        if (!match) return;
+        const agentProfile = await storage.getAgentByUserId(userId);
+        const isParticipant = match.userId === userId || (agentProfile && agentProfile.id === match.agentId);
+        if (!isParticipant) return;
+        socket.join(`match-${matchId}`);
+      } catch {
+        // silently drop unauthorized join attempts
       }
     });
+    // send-message via socket is intentionally removed — REST endpoints are the
+    // authoritative write path (/api/messages, /api/agent-portal/messages) and
+    // enforce authentication. Real-time delivery is handled by io.emit after REST saves.
   });
 
   // ─── AGENTS ────────────────────────────────────────────────────────────────
@@ -68,7 +67,12 @@ export async function registerRoutes(
       const userId = req.user.id;
       let agentList;
       if (scored === "true") {
-        agentList = await storage.getScoredAgents(userId);
+        agentList = await storage.getScoredAgents(userId, {
+          search: search as string | undefined,
+          specialty: specialty as string | undefined,
+          language: language as string | undefined,
+          zipCode: zipCode as string | undefined,
+        });
       } else {
         agentList = await storage.getAgents(
           { search, specialty, language, zipCode, minPrice: minPrice ? Number(minPrice) : undefined, maxPrice: maxPrice ? Number(maxPrice) : undefined },
@@ -103,7 +107,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/agents/import-from-places", isAuthenticated, async (req: any, res) => {
+  app.post("/api/agents/import-from-places", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const { placeId, name, address, phone, website, rating, userRatingCount, photoReference } = req.body;
       if (!placeId || !name) return res.status(400).json({ message: "placeId and name required" });
@@ -418,6 +422,10 @@ export async function registerRoutes(
       if (!["confirmed", "declined", "rescheduled"].includes(status)) {
         return res.status(400).json({ message: "status must be confirmed, declined, or rescheduled" });
       }
+      // Verify the booking belongs to this agent
+      const existingBooking = await storage.getBooking(req.params.id);
+      if (!existingBooking) return res.status(404).json({ message: "Booking not found" });
+      if (existingBooking.agentId !== req.agentProfile.id) return res.status(403).json({ message: "Access denied" });
       const booking = await storage.updateBookingStatus(req.params.id, status, agentNotes, confirmedDate, confirmedTime);
       res.json(booking);
     } catch (err: any) {

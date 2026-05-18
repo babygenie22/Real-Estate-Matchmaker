@@ -129,7 +129,9 @@ export const reviews = pgTable("reviews", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, createdAt: true });
+export const insertReviewSchema = createInsertSchema(reviews)
+  .omit({ id: true, createdAt: true })
+  .extend({ rating: z.number().int().min(1).max(5) });
 export type InsertReview = z.infer<typeof insertReviewSchema>;
 export type Review = typeof reviews.$inferSelect;
 

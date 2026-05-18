@@ -71,8 +71,8 @@ export default function AgentDetailModal({ agent, onClose, onLike, onPass }: Age
           {/* Stats */}
           <div className="grid grid-cols-4 gap-3">
             {[
-              { icon: TrendingUp, label: "Deals", value: String(agent.transactionCount) },
-              { icon: Clock, label: "Avg Days", value: `${agent.avgDaysOnMarket}d` },
+              { icon: TrendingUp, label: "Deals", value: agent.transactionCount != null ? String(agent.transactionCount) : "—" },
+              { icon: Clock, label: "Avg Days", value: agent.avgDaysOnMarket != null ? `${agent.avgDaysOnMarket}d` : "—" },
               { icon: Star, label: "Sale/List", value: `${((agent.saleToListRatio || 1) * 100).toFixed(0)}%` },
               { icon: Award, label: "Reviews", value: String(agent.reviewCount) },
             ].map((stat) => (

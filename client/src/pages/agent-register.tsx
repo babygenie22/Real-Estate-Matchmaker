@@ -130,7 +130,7 @@ export default function AgentRegisterPage() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.2 }}
-            className="bg-card border border-card-border rounded-2xl p-6 shadow-md"
+            className="bg-card border border-border rounded-2xl p-6 shadow-md"
           >
             {/* STEP 1: Account */}
             {step === 1 && (

@@ -34,6 +34,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-1">
             <Link href="/admin">
               <button
+                aria-label="Admin dashboard"
                 className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${location === "/admin" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
                 data-testid="button-nav-admin"
               >
