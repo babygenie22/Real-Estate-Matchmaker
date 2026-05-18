@@ -21,7 +21,7 @@ import { Home } from "lucide-react";
 
 function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
 
   if (isLoading) {
     return (
@@ -41,7 +41,7 @@ function AuthenticatedApp() {
   }
 
   if (user && !user.onboardingCompleted && location !== "/onboarding") {
-    window.location.href = "/onboarding";
+    setLocation("/onboarding");
     return null;
   }
 
@@ -72,7 +72,7 @@ function Router() {
     return <AgentRegisterPage />;
   }
 
-  if (location === "/agent-portal") {
+  if (location.startsWith("/agent-portal")) {
     return <AgentPortalPage />;
   }
 

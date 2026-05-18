@@ -87,7 +87,7 @@ function MatchCard({ match, onMessage }: { match: MatchWithAgent; onMessage: () 
           </div>
           <div className="flex gap-1.5 mt-2 flex-wrap">
             {agent.specialties?.slice(0, 2).map((s) => (
-              <Badge key={s} variant="secondary" className="text-xs py-0 bg-primary/8 text-primary border-primary/15">{s}</Badge>
+              <Badge key={s} variant="secondary" className="text-xs py-0 bg-primary/10 text-primary border-primary/20">{s}</Badge>
             ))}
           </div>
         </div>

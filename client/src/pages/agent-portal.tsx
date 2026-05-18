@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import { format } from "date-fns";
 import {
   Home, Star, MessageSquare, Calendar, User, BarChart3,
   CheckCircle, XCircle, Clock, LogOut, Edit2,
   Phone, Globe, Linkedin, MapPin, Award, Users, TrendingUp,
-  AlertCircle, Save, X, MessageCircle,
+  AlertCircle, Save, X, MessageCircle, ArrowLeft, Send,
 } from "lucide-react";
 
 async function apiFetch(url: string, options?: RequestInit) {
@@ -27,6 +28,116 @@ const SPECIALTIES = ["Luxury Homes","First-Time Buyers","Investment Properties",
 const LANGUAGES = ["English","Spanish","Mandarin","French","Portuguese","Hindi","Arabic","Korean","Vietnamese","Tagalog"];
 
 type Tab = "overview" | "matches" | "bookings" | "profile";
+
+// ─── Inline Chat Panel (agent side) ────────────────────────────────────────
+function AgentChatPanel({ matchId, onBack }: { matchId: string; onBack: () => void }) {
+  const [content, setContent] = useState("");
+  const [localMessages, setLocalMessages] = useState<any[]>([]);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+
+  const { data: messages = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/agent-portal/messages", matchId],
+    queryFn: async () => {
+      const res = await fetch(`/api/matches/${matchId}/messages`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load messages");
+      return res.json();
+    },
+    refetchInterval: 5000,
+  });
+
+  useEffect(() => { setLocalMessages(messages); }, [messages]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [localMessages]);
+
+  const sendMutation = useMutation({
+    mutationFn: async (text: string) => {
+      const res = await fetch("/api/agent-portal/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ matchId, content: text }),
+      });
+      if (!res.ok) throw new Error("Failed to send");
+      return res.json();
+    },
+    onSuccess: (msg: any) => {
+      setLocalMessages(prev => {
+        const without = prev.filter(m => !m.id?.startsWith("temp-"));
+        return without.find(m => m.id === msg.id) ? without : [...without, msg];
+      });
+    },
+    onError: () => {
+      setLocalMessages(prev => prev.filter(m => !m.id?.startsWith("temp-")));
+      toast({ title: "Error", description: "Failed to send message", variant: "destructive" });
+    },
+  });
+
+  const handleSend = () => {
+    if (!content.trim()) return;
+    const text = content.trim();
+    setContent("");
+    const tempMsg = { id: `temp-${Date.now()}`, matchId, senderId: "agent", senderType: "agent", content: text, createdAt: new Date() };
+    setLocalMessages(prev => [...prev, tempMsg]);
+    sendMutation.mutate(text);
+  };
+
+  return (
+    <div className="flex flex-col h-screen bg-background">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-background shadow-sm">
+        <Button size="icon" variant="ghost" onClick={onBack}>
+          <ArrowLeft className="w-4 h-4" />
+        </Button>
+        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">C</div>
+        <div>
+          <div className="font-semibold text-sm text-foreground">Client Chat</div>
+          <div className="text-xs text-muted-foreground">Match #{matchId.slice(0, 8)}</div>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {isLoading ? (
+          <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-10 w-64 rounded-xl" />)}</div>
+        ) : localMessages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
+            <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center">
+              <MessageSquare className="w-7 h-7 text-primary" />
+            </div>
+            <p className="text-sm font-medium text-foreground">No messages yet</p>
+            <p className="text-xs text-muted-foreground">Send a message to start the conversation.</p>
+          </div>
+        ) : (
+          localMessages.map((msg: any) => {
+            const isMe = msg.senderType === "agent";
+            return (
+              <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[75%] px-3 py-2 rounded-xl text-sm leading-relaxed ${isMe ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm"}`}>
+                  <p>{msg.content}</p>
+                  {msg.createdAt && (
+                    <p className={`text-xs mt-1 ${isMe ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                      {format(new Date(msg.createdAt), "h:mm a")}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+        <div ref={bottomRef} />
+      </div>
+      <div className="flex items-center gap-2 px-4 py-3 border-t border-border bg-background">
+        <Input
+          placeholder="Type a message..."
+          value={content}
+          onChange={e => setContent(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+          className="flex-1"
+        />
+        <Button size="icon" onClick={handleSend} disabled={!content.trim() || sendMutation.isPending}>
+          <Send className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 function StatCard({ icon, label, value, sub, color = "blue" }: {
   icon: React.ReactNode; label: string; value: string | number; sub?: string; color?: string;
@@ -53,9 +164,14 @@ function StatCard({ icon, label, value, sub, color = "blue" }: {
 
 export default function AgentPortalPage() {
   const [tab, setTab] = useState<Tab>("overview");
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Inline chat — agent portal navigates to /agent-portal/chat/:matchId
+  const chatMatchId = location.startsWith("/agent-portal/chat/")
+    ? location.replace("/agent-portal/chat/", "")
+    : null;
 
   async function handleLogout() {
     await fetch("/api/logout", { method: "POST", credentials: "include" });
@@ -155,6 +271,11 @@ export default function AgentPortalPage() {
     { id: "bookings", label: "Bookings", icon: <Calendar className="w-4 h-4" /> },
     { id: "profile", label: "Profile", icon: <User className="w-4 h-4" /> },
   ];
+
+  // Inline chat view for agent-portal/chat/:matchId
+  if (chatMatchId) {
+    return <AgentChatPanel matchId={chatMatchId} onBack={() => setLocation("/agent-portal")} />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-background">
@@ -263,7 +384,7 @@ export default function AgentPortalPage() {
                         <div key={b.id} className="flex items-center justify-between bg-white rounded-xl px-3 py-2 border border-amber-100">
                           <div>
                             <div className="text-sm font-medium text-foreground">{b.userName || "Client"}</div>
-                            <div className="text-xs text-muted-foreground">{b.preferredDate} · {b.preferredTime}</div>
+                            <div className="text-xs text-muted-foreground">{b.proposedDate} · {b.proposedTime}</div>
                           </div>
                           <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => { setTab("bookings"); setBookingAction({ id: b.id, mode: "confirm" }); }}>
                             Respond
@@ -295,7 +416,7 @@ export default function AgentPortalPage() {
                             <div className="text-sm font-medium text-foreground truncate">{m.userName || "Client"}</div>
                             <div className="text-xs text-muted-foreground">Matched {new Date(m.createdAt).toLocaleDateString()}</div>
                           </div>
-                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-muted-foreground" onClick={() => setLocation(`/chat/${m.id}`)}>
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-muted-foreground" onClick={() => setLocation(`/agent-portal/chat/${m.id}`)}>
                             <MessageCircle className="w-4 h-4" />
                           </Button>
                         </div>
@@ -336,7 +457,7 @@ export default function AgentPortalPage() {
                         <div className="font-medium text-foreground truncate">{m.userName || "Client"}</div>
                         <div className="text-xs text-muted-foreground">Matched {new Date(m.createdAt).toLocaleDateString()}</div>
                       </div>
-                      <Button size="sm" className="gap-1.5 h-8 text-xs shadow-sm" onClick={() => setLocation(`/chat/${m.id}`)}>
+                      <Button size="sm" className="gap-1.5 h-8 text-xs shadow-sm" onClick={() => setLocation(`/agent-portal/chat/${m.id}`)}>
                         <MessageSquare className="w-3.5 h-3.5" /> Chat
                       </Button>
                     </div>
@@ -371,7 +492,7 @@ export default function AgentPortalPage() {
                           <div>
                             <div className="font-medium text-foreground">{b.userName || "Client"}</div>
                             <div className="text-xs text-muted-foreground mt-0.5">
-                              Requested: <strong>{b.preferredDate}</strong> at <strong>{b.preferredTime}</strong>
+                              Requested: <strong>{b.proposedDate}</strong> at <strong>{b.proposedTime}</strong>
                             </div>
                             {b.confirmedDate && (
                               <div className="text-xs text-green-700 mt-0.5">
@@ -390,7 +511,7 @@ export default function AgentPortalPage() {
                             {!isActive ? (
                               <div className="flex gap-2 mt-3">
                                 <Button size="sm" className="flex-1 gap-1.5 h-8 text-xs bg-green-500 hover:bg-green-600 text-white shadow-sm"
-                                  onClick={() => { setBookingAction({ id: b.id, mode: "confirm" }); setConfirmDate(b.preferredDate); setConfirmTime(b.preferredTime); }}>
+                                  onClick={() => { setBookingAction({ id: b.id, mode: "confirm" }); setConfirmDate(b.proposedDate); setConfirmTime(b.proposedTime); }}>
                                   <CheckCircle className="w-3.5 h-3.5" /> Confirm
                                 </Button>
                                 <Button size="sm" variant="outline" className="flex-1 gap-1.5 h-8 text-xs text-destructive border-destructive/30 hover:bg-destructive/5"

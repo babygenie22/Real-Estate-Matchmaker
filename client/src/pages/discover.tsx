@@ -93,7 +93,8 @@ export default function DiscoverPage() {
   const queryClient = useQueryClient();
 
   const { data: agents = [], isLoading } = useQuery<Agent[]>({
-    queryKey: ["/api/agents", { scored: "true" }],
+    // Include filters in queryKey so React Query refetches when filters change
+    queryKey: ["/api/agents", { scored: "true", ...filters }],
     queryFn: async () => {
       const params = new URLSearchParams({ scored: "true" });
       if (filters.search) params.append("search", filters.search);
@@ -216,25 +217,28 @@ export default function DiscoverPage() {
       </div>
 
       <div className="flex-1 relative flex items-center justify-center overflow-hidden p-4">
-        {matchAnimation && (
-          <motion.div
-            initial={{ scale: 0.5, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 1.2, opacity: 0 }}
-            className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none"
-          >
-            <div className="flex flex-col items-center gap-3">
-              <motion.div
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ repeat: 2, duration: 0.4 }}
-                className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center"
-              >
-                <CheckCircle className="w-12 h-12 text-white" />
-              </motion.div>
-              <div className="text-2xl font-bold text-foreground">It's a Match!</div>
-            </div>
-          </motion.div>
-        )}
+        <AnimatePresence>
+          {matchAnimation && (
+            <motion.div
+              key="match-animation"
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 1.2, opacity: 0 }}
+              className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none"
+            >
+              <div className="flex flex-col items-center gap-3">
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ repeat: 2, duration: 0.4 }}
+                  className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center"
+                >
+                  <CheckCircle className="w-12 h-12 text-white" />
+                </motion.div>
+                <div className="text-2xl font-bold text-foreground">It's a Match!</div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {isLoading ? (
           <div className="w-full max-w-sm">

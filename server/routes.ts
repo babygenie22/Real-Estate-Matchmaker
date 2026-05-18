@@ -19,6 +19,13 @@ async function isAgent(req: any, res: any, next: any) {
   next();
 }
 
+// Middleware: confirms the request user has the admin role
+function isAdmin(req: any, res: any, next: any) {
+  if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+  if (req.user.role !== "admin") return res.status(403).json({ message: "Admin access required" });
+  next();
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -27,13 +34,19 @@ export async function registerRoutes(
   registerAuthRoutes(app);
   await seedDatabase();
 
-  const io = new SocketIOServer(httpServer, { cors: { origin: "*" } });
+  const io = new SocketIOServer(httpServer, {
+    cors: { origin: process.env.APP_URL || "http://localhost:3001", credentials: true },
+  });
 
   io.on("connection", (socket) => {
     socket.on("join-match", (matchId: string) => socket.join(`match-${matchId}`));
 
+    // Note: senderId/senderType are intentionally ignored here; REST endpoints
+    // (/api/messages and /api/agent-portal/messages) are the authoritative write
+    // path that enforces auth. This socket handler is kept for real-time delivery only.
     socket.on("send-message", async (data: { matchId: string; content: string; senderId: string; senderType: string }) => {
       try {
+        if (!data.matchId || !data.content?.trim()) return;
         const msg = await storage.createMessage({
           matchId: data.matchId,
           senderId: data.senderId,
@@ -64,7 +77,7 @@ export async function registerRoutes(
       }
       res.json(agentList);
     } catch (err) {
-      console.error(err);
+      console.error("GET /api/agents error:", err);
       res.status(500).json({ message: "Failed to fetch agents" });
     }
   });
@@ -175,6 +188,15 @@ export async function registerRoutes(
 
   app.get("/api/matches/:id/messages", isAuthenticated, async (req: any, res) => {
     try {
+      const match = await storage.getMatch(req.params.id);
+      if (!match) return res.status(404).json({ message: "Match not found" });
+      // Only the matched user or the matched agent may read messages
+      const isOwner = match.userId === req.user.id;
+      const agentProfile = await storage.getAgentByUserId(req.user.id);
+      const isMatchedAgent = agentProfile && match.agentId === agentProfile.id;
+      if (!isOwner && !isMatchedAgent) {
+        return res.status(403).json({ message: "Access denied" });
+      }
       const msgs = await storage.getMessagesByMatch(req.params.id);
       res.json(msgs);
     } catch (err) {
@@ -252,6 +274,9 @@ export async function registerRoutes(
 
   app.put("/api/notifications/:id/read", isAuthenticated, async (req: any, res) => {
     try {
+      const notification = await storage.getNotification(req.params.id);
+      if (!notification) return res.status(404).json({ message: "Notification not found" });
+      if (notification.userId !== req.user.id) return res.status(403).json({ message: "Access denied" });
       await storage.markNotificationRead(req.params.id);
       res.json({ success: true });
     } catch (err) {
@@ -436,7 +461,7 @@ export async function registerRoutes(
 
   // ─── ADMIN ─────────────────────────────────────────────────────────────────
 
-  app.get("/api/admin/stats", isAuthenticated, async (req: any, res) => {
+  app.get("/api/admin/stats", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const stats = await storage.getAdminStats();
       res.json(stats);
@@ -445,7 +470,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/admin/pending-agents", isAuthenticated, async (req: any, res) => {
+  app.get("/api/admin/pending-agents", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const pending = await storage.getPendingAgents();
       res.json(pending);
@@ -454,7 +479,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/admin/agents/:id/approve", isAuthenticated, async (req: any, res) => {
+  app.post("/api/admin/agents/:id/approve", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       await storage.approveAgent(req.params.id);
       res.json({ success: true });

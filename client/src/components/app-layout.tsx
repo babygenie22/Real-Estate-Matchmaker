@@ -2,6 +2,7 @@ import { useLocation, Link } from "wouter";
 import { Home, Heart, User, Shield, Compass, Bell } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Notification } from "@shared/schema";
+import { useAuth } from "@/hooks/use-auth";
 
 const NAV_ITEMS = [
   { href: "/discover", label: "Discover", icon: Compass },
@@ -12,6 +13,7 @@ const NAV_ITEMS = [
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
+  const { user } = useAuth();
 
   const { data: notifications = [] } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
@@ -28,16 +30,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
           <span className="font-bold text-base text-foreground">HomeMatch</span>
         </div>
-        <div className="flex items-center gap-1">
-          <Link href="/admin">
-            <button
-              className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${location === "/admin" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
-              data-testid="button-nav-admin"
-            >
-              <Shield className="w-4 h-4" />
-            </button>
-          </Link>
-        </div>
+        {user?.role === "admin" && (
+          <div className="flex items-center gap-1">
+            <Link href="/admin">
+              <button
+                className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${location === "/admin" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+                data-testid="button-nav-admin"
+              >
+                <Shield className="w-4 h-4" />
+              </button>
+            </Link>
+          </div>
+        )}
       </header>
 
       <main className="flex-1 overflow-hidden">

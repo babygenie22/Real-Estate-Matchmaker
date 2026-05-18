@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bell, Heart, MessageSquare, Calendar, CheckCheck } from "lucide-react";
+import { Bell, Heart, MessageSquare, Calendar, CheckCheck, CheckCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Notification } from "@shared/schema";
@@ -11,12 +11,14 @@ const typeIcon: Record<string, React.ElementType> = {
   match: Heart,
   message: MessageSquare,
   booking: Calendar,
+  booking_update: CheckCircle,
 };
 
 const typeColor: Record<string, string> = {
   match: "bg-green-100 text-green-600",
   message: "bg-blue-100 text-blue-600",
   booking: "bg-amber-100 text-amber-600",
+  booking_update: "bg-emerald-100 text-emerald-600",
 };
 
 export default function NotificationsPage() {
@@ -97,7 +99,7 @@ export default function NotificationsPage() {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.2 }}
-                    className={`flex gap-3 px-4 py-4 cursor-pointer transition-colors hover:bg-muted/40 ${!n.read ? "bg-primary/3" : ""}`}
+                    className={`flex gap-3 px-4 py-4 cursor-pointer transition-colors hover:bg-muted/40 ${!n.read ? "bg-primary/10" : ""}`}
                     onClick={() => !n.read && readOneMutation.mutate(n.id)}
                     data-testid={`notification-${n.id}`}
                   >

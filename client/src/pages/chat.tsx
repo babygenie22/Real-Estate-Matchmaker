@@ -33,12 +33,19 @@ export default function ChatPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const { data: matches = [] } = useQuery<MatchWithAgent[]>({
+  const { data: matches = [], isLoading: matchesLoading } = useQuery<MatchWithAgent[]>({
     queryKey: ["/api/matches"],
   });
 
   const match = matches.find(m => m.id === matchId);
   const agent = match?.agent;
+
+  // Redirect if matches loaded but this matchId doesn't belong to the user
+  useEffect(() => {
+    if (!matchesLoading && matches.length > 0 && !match) {
+      setLocation("/matches");
+    }
+  }, [matchesLoading, matches, match, setLocation]);
 
   const { data: messages = [], isLoading } = useQuery<Message[]>({
     queryKey: ["/api/matches", matchId, "messages"],

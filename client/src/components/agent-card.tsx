@@ -119,15 +119,15 @@ export default function AgentCard({ agent, onLike, onPass, isTop }: AgentCardPro
 
             <div className="grid grid-cols-3 gap-2 mb-3">
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-2.5 text-center border border-white/10">
-                <div className="text-white font-bold text-sm">{agent.transactionCount}</div>
+                <div className="text-white font-bold text-sm">{agent.transactionCount ?? "—"}</div>
                 <div className="text-white/55 text-xs">Deals</div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-2.5 text-center border border-white/10">
-                <div className="text-white font-bold text-sm">{agent.avgDaysOnMarket}d</div>
+                <div className="text-white font-bold text-sm">{agent.avgDaysOnMarket != null ? `${agent.avgDaysOnMarket}d` : "—"}</div>
                 <div className="text-white/55 text-xs">Avg DOM</div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-2.5 text-center border border-white/10">
-                <div className="text-white font-bold text-sm">{((agent.saleToListRatio || 1) * 100).toFixed(0)}%</div>
+                <div className="text-white font-bold text-sm">{agent.saleToListRatio != null ? `${(agent.saleToListRatio * 100).toFixed(0)}%` : "—"}</div>
                 <div className="text-white/55 text-xs">S/L Ratio</div>
               </div>
             </div>

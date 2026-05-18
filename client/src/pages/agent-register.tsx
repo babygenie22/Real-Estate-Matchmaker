@@ -329,7 +329,7 @@ export default function AgentRegisterPage() {
 
         <p className="text-center text-xs text-muted-foreground mt-6">
           Already have an agent account?{" "}
-          <button onClick={() => setLocation("/")} className="text-primary font-semibold">Log in</button>
+          <button onClick={() => setLocation("/agent-portal")} className="text-primary font-semibold">Log in to Agent Portal</button>
         </p>
       </div>
     </div>

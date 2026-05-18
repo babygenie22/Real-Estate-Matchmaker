@@ -25,14 +25,19 @@ export function verifyPassword(password: string, stored: string): boolean {
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000;
+  const secret = process.env.SESSION_SECRET;
+  if (!secret && process.env.NODE_ENV === "production") {
+    throw new Error("SESSION_SECRET env var is required in production");
+  }
   return session({
-    secret: process.env.SESSION_SECRET || "homematch-dev-secret-change-in-production",
+    secret: secret || "homematch-dev-secret-change-in-production",
     store: new MemStore({ checkPeriod: sessionTtl }),
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
       maxAge: sessionTtl,
     },
   });
