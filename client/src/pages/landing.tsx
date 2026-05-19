@@ -239,7 +239,7 @@ export default function LandingPage() {
               <span className="text-primary"> Dream Agent</span>
             </motion.h1>
             <motion.p variants={fadeUp} className="text-xl text-muted-foreground leading-relaxed mb-10 max-w-2xl">
-              HomeMatch uses intelligent matching to connect you with top-rated real estate agents based on your preferences, budget, and local expertise, focused on Michigan's most trusted agents. Like Tinder — but for finding your perfect real estate partner.
+              Meet Michigan's top real estate agents — matched to your budget, neighborhood, and style. Swipe through verified professionals, chat instantly, and close with confidence.
             </motion.p>
             <motion.div variants={fadeUp} className="flex flex-wrap gap-4">
               <Button size="lg" className="gap-2 shadow-md" onClick={openRegister} data-testid="link-cta-primary">
@@ -249,15 +249,15 @@ export default function LandingPage() {
                 Browse Agents
               </Button>
             </motion.div>
-            <motion.div variants={stagger} className="flex flex-wrap gap-10 mt-14">
+            <motion.div variants={stagger} className="grid grid-cols-3 gap-4 mt-14 max-w-sm">
               {[
                 { label: "Active Agents", value: "2,400+" },
                 { label: "Happy Buyers", value: "18,000+" },
-                { label: "Avg. Days to Match", value: "< 2" },
+                { label: "Days to Match", value: "< 2" },
               ].map((stat, i) => (
                 <motion.div key={stat.label} variants={fadeUp} custom={i} data-testid={`stat-${stat.label.toLowerCase().replace(/ /g, "-")}`}>
-                  <div className="text-3xl font-bold text-foreground">{stat.value}</div>
-                  <div className="text-sm text-muted-foreground">{stat.label}</div>
+                  <div className="text-2xl font-bold text-foreground">{stat.value}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5 leading-tight">{stat.label}</div>
                 </motion.div>
               ))}
             </motion.div>
