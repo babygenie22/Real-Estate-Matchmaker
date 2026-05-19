@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Send, Star } from "lucide-react";
+import { ArrowLeft, Send, Star, MapPin } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -149,9 +149,17 @@ export default function ChatPage() {
             </Avatar>
             <div className="flex-1 min-w-0">
               <div className="font-semibold text-sm text-foreground truncate">{agent.name}</div>
-              <div className="flex items-center gap-1">
-                <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                <span className="text-xs text-muted-foreground">{agent.rating?.toFixed(1)} · {agent.yearsExperience}yr exp</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1">
+                  <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                  <span className="text-xs text-muted-foreground">{agent.rating?.toFixed(1)} · {agent.yearsExperience}yr exp</span>
+                </div>
+                {agent.serviceAreas && agent.serviceAreas.filter(a => !/^\d+$/.test(a))[0] && (
+                  <div className="flex items-center gap-0.5">
+                    <MapPin className="w-2.5 h-2.5 text-muted-foreground/60" />
+                    <span className="text-xs text-muted-foreground/60">{agent.serviceAreas.filter(a => !/^\d+$/.test(a))[0]}</span>
+                  </div>
+                )}
               </div>
             </div>
           </>
@@ -166,13 +174,24 @@ export default function ChatPage() {
             {[1, 2, 3].map(i => <Skeleton key={i} className="h-10 w-64 rounded-xl" />)}
           </div>
         ) : localMessages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-center py-10">
-            <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center">
+          <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-10 px-6">
+            <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-primary/5 rounded-2xl flex items-center justify-center border border-primary/10">
               <Send className="w-7 h-7 text-primary" />
             </div>
             <div>
-              <p className="text-sm font-medium text-foreground">Start the conversation!</p>
-              <p className="text-xs text-muted-foreground mt-1">Introduce yourself and ask about their availability.</p>
+              <p className="text-base font-bold text-foreground">Say hello to {agent?.name?.split(" ")[0] ?? "your agent"}!</p>
+              <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">Introduce yourself and ask about homes in {agent?.serviceAreas?.filter(a => !/^\d+$/.test(a))[0] ?? "your area"}.</p>
+            </div>
+            <div className="flex flex-wrap gap-2 justify-center mt-1">
+              {["Hi! I'm looking for a home", "What's the market like?", "Are you available this week?"].map(prompt => (
+                <button
+                  key={prompt}
+                  onClick={() => setContent(prompt)}
+                  className="text-xs text-primary bg-primary/8 hover:bg-primary/15 border border-primary/15 px-3 py-1.5 rounded-full transition-colors"
+                >
+                  {prompt}
+                </button>
+              ))}
             </div>
           </div>
         ) : (
@@ -199,19 +218,20 @@ export default function ChatPage() {
         <div ref={bottomRef} />
       </div>
 
-      <div className="flex-shrink-0 flex items-center gap-2 px-4 py-3 border-t border-border bg-background">
+      <div className="flex-shrink-0 flex items-center gap-2 px-4 py-3 border-t border-border bg-background/95 backdrop-blur-sm">
         <Input
           placeholder="Type a message..."
           value={content}
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="flex-1"
+          className="flex-1 rounded-xl bg-muted/50 border-border/60"
           data-testid="input-message"
         />
         <Button
           size="icon"
           onClick={handleSend}
           disabled={!content.trim() || sendMutation.isPending}
+          className={`rounded-xl transition-all ${content.trim() ? "bg-primary shadow-sm" : "bg-muted"}`}
           data-testid="button-send-message"
         >
           <Send className="w-4 h-4" />

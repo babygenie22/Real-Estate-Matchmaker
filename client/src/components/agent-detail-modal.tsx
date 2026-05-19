@@ -114,7 +114,7 @@ export default function AgentDetailModal({ agent, onClose, onLike, onPass }: Age
                 Service Areas
               </h3>
               <div className="flex flex-wrap gap-2">
-                {agent.serviceAreas.map((area) => (
+                {agent.serviceAreas.filter(a => !/^\d+$/.test(a)).map((area) => (
                   <span key={area} className="text-xs px-2.5 py-1 rounded-lg bg-muted text-muted-foreground border border-border">{area}</span>
                 ))}
               </div>

@@ -108,7 +108,7 @@ function MatchCard({ match, onMessage }: { match: MatchWithAgent; onMessage: () 
             </div>
             <div className="flex items-center gap-1 mt-1">
               <MapPin className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-              <span className="text-xs text-muted-foreground truncate">{agent.serviceAreas?.slice(0, 2).join(", ")}</span>
+              <span className="text-xs text-muted-foreground truncate">{agent.serviceAreas?.filter(a => !/^\d+$/.test(a)).slice(0, 2).join(", ")}</span>
             </div>
           </div>
 

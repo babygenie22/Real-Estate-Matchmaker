@@ -110,7 +110,7 @@ export default function AgentCard({ agent, onLike, onPass, isTop }: AgentCardPro
             </div>
 
             <div className="flex flex-wrap gap-1.5 mb-3">
-              {agent.serviceAreas?.slice(0, 3).map((area) => (
+              {agent.serviceAreas?.filter(a => !/^\d+$/.test(a)).slice(0, 3).map((area) => (
                 <div key={area} className="flex items-center gap-1 text-xs text-white/80 bg-white/10 backdrop-blur-sm rounded-full px-2.5 py-0.5 border border-white/10">
                   <MapPin className="w-2.5 h-2.5" />
                   {area}
