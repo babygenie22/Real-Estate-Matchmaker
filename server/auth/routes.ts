@@ -1,8 +1,8 @@
 import type { Express } from "express";
 import passport from "passport";
-import { authStorage } from "./storage";
-import { isAuthenticated, hashPassword } from "./replitAuth";
-import { signToken } from "../../jwt";
+import { storage } from "../storage";
+import { isAuthenticated, hashPassword } from "./setup";
+import { signToken } from "../jwt";
 import { z } from "zod";
 
 const registerSchema = z.object({
@@ -16,12 +16,12 @@ export function registerAuthRoutes(app: Express): void {
   app.post("/api/auth/register", async (req, res) => {
     try {
       const data = registerSchema.parse(req.body);
-      const existing = await authStorage.getUserByEmail(data.email.toLowerCase().trim());
+      const existing = await storage.getUserByEmail(data.email.toLowerCase().trim());
       if (existing) {
         return res.status(400).json({ message: "An account with this email already exists" });
       }
       const passwordHash = hashPassword(data.password);
-      const raw = await authStorage.createUser({
+      const raw = await storage.createUser({
         email: data.email.toLowerCase().trim(),
         passwordHash,
         firstName: data.firstName,
@@ -47,7 +47,8 @@ export function registerAuthRoutes(app: Express): void {
       if (!user) return res.status(401).json({ message: info?.message || "Invalid credentials" });
       req.login(user, (loginErr) => {
         if (loginErr) return next(loginErr);
-        res.json(user);
+        const { passwordHash: _, ...safeUser } = user as any;
+        res.json(safeUser);
       });
     })(req, res, next);
   });
@@ -56,19 +57,18 @@ export function registerAuthRoutes(app: Express): void {
     req.logout(() => res.json({ success: true }));
   });
 
-  // legacy GET logout (used by profile page link)
   app.get("/api/logout", (req, res) => {
     req.logout(() => res.redirect("/"));
   });
 
-  // Mobile JWT auth endpoints
+  // Mobile JWT endpoints
   app.post("/api/auth/mobile/register", async (req, res) => {
     try {
       const data = registerSchema.parse(req.body);
-      const existing = await authStorage.getUserByEmail(data.email.toLowerCase().trim());
+      const existing = await storage.getUserByEmail(data.email.toLowerCase().trim());
       if (existing) return res.status(400).json({ message: "An account with this email already exists" });
       const passwordHash = hashPassword(data.password);
-      const raw = await authStorage.createUser({ email: data.email.toLowerCase().trim(), passwordHash, firstName: data.firstName, lastName: data.lastName });
+      const raw = await storage.createUser({ email: data.email.toLowerCase().trim(), passwordHash, firstName: data.firstName, lastName: data.lastName });
       const { passwordHash: _, ...user } = raw as any;
       const token = signToken(user.id);
       res.json({ token, user });
@@ -83,9 +83,9 @@ export function registerAuthRoutes(app: Express): void {
     try {
       const { email, password } = req.body;
       if (!email || !password) return res.status(400).json({ message: "Email and password required" });
-      const raw = await authStorage.getUserByEmail(email.toLowerCase().trim());
+      const { verifyPassword } = await import("./setup");
+      const raw = await storage.getUserByEmail(email.toLowerCase().trim());
       if (!raw || !raw.passwordHash) return res.status(401).json({ message: "Invalid email or password" });
-      const { verifyPassword } = await import("./replitAuth");
       if (!verifyPassword(password, raw.passwordHash)) return res.status(401).json({ message: "Invalid email or password" });
       const { passwordHash: _, ...user } = raw as any;
       const token = signToken(user.id);
@@ -96,25 +96,23 @@ export function registerAuthRoutes(app: Express): void {
     }
   });
 
-  // Store Expo push token
   app.post("/api/push-token", isAuthenticated, async (req: any, res) => {
     try {
       const { token } = req.body;
-      await authStorage.upsertUser({ id: req.user.id, expoPushToken: token });
+      await storage.upsertUser({ id: req.user.id, expoPushToken: token });
       res.json({ success: true });
-    } catch (err) {
+    } catch {
       res.status(500).json({ message: "Failed to save push token" });
     }
   });
 
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
-      const raw = await authStorage.getUser(req.user.id);
+      const raw = await storage.getUser(req.user.id);
       if (!raw) return res.status(404).json({ message: "User not found" });
       const { passwordHash: _, ...user } = raw as any;
       res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
+    } catch {
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });

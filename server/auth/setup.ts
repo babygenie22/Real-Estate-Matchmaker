@@ -4,8 +4,8 @@ import session from "express-session";
 import MemoryStore from "memorystore";
 import type { Express, RequestHandler } from "express";
 import { scryptSync, randomBytes, timingSafeEqual } from "crypto";
-import { authStorage } from "./storage";
-import { verifyToken } from "../../jwt";
+import { storage } from "../storage";
+import { verifyToken } from "../jwt";
 
 const MemStore = MemoryStore(session);
 
@@ -51,7 +51,7 @@ export async function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy({ usernameField: "email" }, async (email, password, done) => {
       try {
-        const user = await authStorage.getUserByEmail(email.toLowerCase().trim());
+        const user = await storage.getUserByEmail(email.toLowerCase().trim());
         if (!user || !user.passwordHash) {
           return done(null, false, { message: "Invalid email or password" });
         }
@@ -68,7 +68,7 @@ export async function setupAuth(app: Express) {
   passport.serializeUser((user: any, cb) => cb(null, user.id));
   passport.deserializeUser(async (id: string, cb) => {
     try {
-      const user = await authStorage.getUser(id);
+      const user = await storage.getUser(id);
       cb(null, user ?? false);
     } catch (err) {
       cb(err);
@@ -77,15 +77,13 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  // Session auth (web)
   if (req.isAuthenticated()) return next();
 
-  // JWT Bearer auth (mobile)
   const authHeader = req.headers.authorization;
   if (authHeader?.startsWith("Bearer ")) {
     const payload = verifyToken(authHeader.slice(7));
     if (payload) {
-      const user = await authStorage.getUser(payload.userId);
+      const user = await storage.getUser(payload.userId);
       if (user) {
         (req as any).user = user;
         return next();

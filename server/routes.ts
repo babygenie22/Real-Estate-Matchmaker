@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { setupAuth, isAuthenticated, hashPassword } from "./replit_integrations/auth/replitAuth";
-import { registerAuthRoutes } from "./replit_integrations/auth/routes";
+import { setupAuth, isAuthenticated, hashPassword } from "./auth/setup";
+import { registerAuthRoutes } from "./auth/routes";
 import { storage } from "./storage";
 import { seedDatabase } from "./seed";
 import { insertLikeSchema, insertMessageSchema, insertBookingSchema, insertReviewSchema } from "@shared/schema";
@@ -178,6 +178,16 @@ export async function registerRoutes(
     }
   });
 
+  // Reset discover deck — clears swipe history so all agents reappear. Matches are preserved.
+  app.delete("/api/likes", isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.resetLikesByUser(req.user.id);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to reset deck" });
+    }
+  });
+
   // ─── MATCHES ───────────────────────────────────────────────────────────────
 
   app.get("/api/matches", isAuthenticated, async (req: any, res) => {
@@ -212,6 +222,10 @@ export async function registerRoutes(
     try {
       const userId = req.user.id;
       const data = insertMessageSchema.parse({ ...req.body, senderId: userId, senderType: "user" });
+      // Verify the match belongs to this user before allowing a write
+      const match = await storage.getMatch(data.matchId);
+      if (!match) return res.status(404).json({ message: "Match not found" });
+      if (match.userId !== userId) return res.status(403).json({ message: "Access denied" });
       const msg = await storage.createMessage(data);
       io.to(`match-${data.matchId}`).emit("new-message", msg);
       res.json(msg);
@@ -226,6 +240,22 @@ export async function registerRoutes(
     try {
       const userId = req.user.id;
       const user = await storage.updateUserPreferences(userId, { ...req.body, onboardingCompleted: true });
+      res.json(user);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  // Update profile preferences without altering onboardingCompleted
+  app.patch("/api/user/profile", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const allowed = ["location", "budget", "propertyType", "preferredStyle", "communicationStyle", "firstName", "lastName"];
+      const updates: Record<string, any> = {};
+      for (const key of allowed) {
+        if (req.body[key] !== undefined) updates[key] = req.body[key];
+      }
+      const user = await storage.updateUserPreferences(userId, updates);
       res.json(user);
     } catch (err: any) {
       res.status(400).json({ message: err.message });
@@ -325,13 +355,12 @@ export async function registerRoutes(
         personalityTags: z.array(z.string()).optional(),
       });
       const data = schema.parse(req.body);
-      const { authStorage } = await import("./replit_integrations/auth/storage");
 
-      const existing = await authStorage.getUserByEmail(data.email.toLowerCase().trim());
+      const existing = await storage.getUserByEmail(data.email.toLowerCase().trim());
       if (existing) return res.status(400).json({ message: "An account with this email already exists" });
 
       const passwordHash = hashPassword(data.password);
-      const user = await authStorage.createUser({
+      const user = await storage.createUser({
         email: data.email.toLowerCase().trim(),
         passwordHash,
         role: "agent",
@@ -437,6 +466,10 @@ export async function registerRoutes(
   app.post("/api/agent-portal/messages", isAuthenticated, isAgent, async (req: any, res) => {
     try {
       const data = insertMessageSchema.parse({ ...req.body, senderId: req.user.id, senderType: "agent" });
+      // Verify the match belongs to this agent before allowing a write
+      const match = await storage.getMatch(data.matchId);
+      if (!match) return res.status(404).json({ message: "Match not found" });
+      if (match.agentId !== req.agentProfile.id) return res.status(403).json({ message: "Access denied" });
       const msg = await storage.createMessage(data);
       io.to(`match-${data.matchId}`).emit("new-message", msg);
       res.json(msg);

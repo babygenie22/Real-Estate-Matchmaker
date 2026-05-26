@@ -1,16 +1,20 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MessageSquare, Star, MapPin, Heart, ChevronRight } from "lucide-react";
-import type { Agent, Match } from "@shared/schema";
+import { MessageSquare, Star, MapPin, Heart, ChevronRight, Info } from "lucide-react";
+import AgentDetailModal from "@/components/agent-detail-modal";
+import { relativeTime } from "@/lib/dateUtils";
+import { cityAreas as getCityAreas, initials as getInitials } from "@/lib/agentUtils";
+import type { Agent, Match, Message } from "@shared/schema";
 
-type MatchWithAgent = Match & { agent: Agent };
+type MatchWithAgent = Match & { agent: Agent; lastMessage?: Message };
 
 export default function MatchesPage() {
   const [, setLocation] = useLocation();
+  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
 
   const { data: matches = [], isLoading } = useQuery<MatchWithAgent[]>({
     queryKey: ["/api/matches"],
@@ -50,35 +54,60 @@ export default function MatchesPage() {
             <p className="text-xs text-muted-foreground mt-0.5">{matches.length} agent{matches.length !== 1 ? "s" : ""} ready to chat</p>
           </div>
           <div className="w-9 h-9 bg-primary/10 rounded-xl flex items-center justify-center">
-            <Heart className="w-4.5 h-4.5 text-primary fill-primary/30" />
+            <Heart className="w-4 h-4 text-primary fill-primary/30" />
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3 pt-2">
+      <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2.5 pt-1">
         {matches.map((match) => (
           <MatchCard
             key={match.id}
             match={match}
             onMessage={() => setLocation(`/chat/${match.id}`)}
+            onViewProfile={() => setSelectedAgent(match.agent)}
           />
         ))}
       </div>
+
+      {/* Agent detail modal */}
+      {selectedAgent && (
+        <AgentDetailModal
+          agent={selectedAgent}
+          onClose={() => setSelectedAgent(null)}
+          onLike={() => setSelectedAgent(null)}
+          onPass={() => setSelectedAgent(null)}
+        />
+      )}
     </div>
   );
 }
 
-function MatchCard({ match, onMessage }: { match: MatchWithAgent; onMessage: () => void }) {
+function MatchCard({
+  match,
+  onMessage,
+  onViewProfile,
+}: {
+  match: MatchWithAgent;
+  onMessage: () => void;
+  onViewProfile: () => void;
+}) {
   const agent = match.agent;
+  const lastMsg = match.lastMessage;
+  const hasUnread = lastMsg && lastMsg.senderType === "agent";
+
   return (
     <div
-      className="group relative overflow-hidden rounded-2xl bg-card border border-border shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer active:scale-[0.99]"
-      onClick={onMessage}
+      className="group relative overflow-hidden rounded-2xl bg-card border border-border shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 active:scale-[0.99]"
       data-testid={`card-match-${match.id}`}
     >
       <div className="flex items-stretch">
-        {/* Photo strip */}
-        <div className="w-24 flex-shrink-0 relative overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5">
+        {/* Photo strip — click opens profile */}
+        <button
+          className="w-[88px] flex-shrink-0 relative overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5 focus:outline-none"
+          onClick={onViewProfile}
+          aria-label={`View ${agent.name}'s profile`}
+        >
           {agent.photo ? (
             <img
               src={agent.photo}
@@ -88,16 +117,23 @@ function MatchCard({ match, onMessage }: { match: MatchWithAgent; onMessage: () 
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <span className="text-2xl font-black text-primary/60">
-                {agent.name.split(" ").map(n => n[0]).join("")}
+                {getInitials(agent.name)}
               </span>
             </div>
           )}
-          {/* Online dot indicator */}
-          <div className="absolute bottom-2 right-2 w-3 h-3 bg-green-400 rounded-full border-2 border-card shadow-sm" />
-        </div>
+          {/* Online dot */}
+          <div className="absolute bottom-2 right-2 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-card shadow-sm" />
+          {/* Info overlay on hover */}
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+            <Info className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" />
+          </div>
+        </button>
 
-        {/* Content */}
-        <div className="flex-1 px-3.5 py-3 flex flex-col justify-between min-w-0">
+        {/* Content — click opens profile */}
+        <button
+          className="flex-1 px-3 py-3 flex flex-col justify-between min-w-0 text-left focus:outline-none"
+          onClick={onViewProfile}
+        >
           <div>
             <div className="flex items-start justify-between gap-2">
               <h3 className="font-bold text-foreground text-[15px] leading-tight">{agent.name}</h3>
@@ -106,32 +142,47 @@ function MatchCard({ match, onMessage }: { match: MatchWithAgent; onMessage: () 
                 <span className="text-xs font-bold text-foreground">{agent.rating?.toFixed(1)}</span>
               </div>
             </div>
-            <div className="flex items-center gap-1 mt-1">
+            <div className="flex items-center gap-1 mt-0.5">
               <MapPin className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-              <span className="text-xs text-muted-foreground truncate">{agent.serviceAreas?.filter(a => !/^\d+$/.test(a)).slice(0, 2).join(", ")}</span>
+              <span className="text-xs text-muted-foreground truncate">
+                {getCityAreas(agent.serviceAreas).slice(0, 2).join(", ")}
+              </span>
             </div>
+
+            {/* Last message preview */}
+            {lastMsg ? (
+              <div className="flex items-center gap-1.5 mt-1.5">
+                {hasUnread && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                )}
+                <p className={`text-xs truncate ${hasUnread ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                  {lastMsg.senderType === "user" ? "You: " : ""}{lastMsg.content}
+                </p>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground/60 italic mt-1.5">No messages yet — say hello!</p>
+            )}
           </div>
 
-          <div className="flex items-center justify-between mt-2.5">
-            <div className="flex gap-1.5 flex-wrap">
-              {agent.specialties?.slice(0, 2).map((s) => (
-                <span key={s} className="text-[10px] font-medium text-primary bg-primary/8 px-2 py-0.5 rounded-full">{s}</span>
-              ))}
-            </div>
-            <button
-              className="flex items-center gap-1 text-xs font-semibold text-primary bg-primary/8 hover:bg-primary/15 px-3 py-1.5 rounded-xl transition-colors"
-              onClick={(e) => { e.stopPropagation(); onMessage(); }}
-              data-testid={`button-message-${match.id}`}
-            >
-              <MessageSquare className="w-3 h-3" />
-              Chat
-            </button>
-          </div>
-        </div>
+          {/* Timestamp */}
+          {lastMsg?.createdAt && (
+            <p className="text-[10px] text-muted-foreground/50 mt-1">
+              {relativeTime(lastMsg.createdAt)}
+            </p>
+          )}
+        </button>
 
-        {/* Right chevron */}
-        <div className="flex items-center pr-2">
-          <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+        {/* Right action column */}
+        <div className="flex flex-col items-center justify-between pr-3 py-3 gap-2 flex-shrink-0">
+          <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-muted-foreground transition-colors" />
+          <button
+            className="flex items-center gap-1 text-xs font-semibold text-primary bg-primary/[0.08] hover:bg-primary/[0.15] px-2.5 py-1.5 rounded-xl transition-colors"
+            onClick={(e) => { e.stopPropagation(); onMessage(); }}
+            data-testid={`button-message-${match.id}`}
+          >
+            <MessageSquare className="w-3 h-3" />
+            Chat
+          </button>
         </div>
       </div>
     </div>

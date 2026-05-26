@@ -6,7 +6,7 @@ import { Bell, Heart, MessageSquare, Calendar, CheckCheck, CheckCircle } from "l
 import { apiRequest } from "@/lib/queryClient";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Notification } from "@shared/schema";
-import { formatDistanceToNow } from "date-fns";
+import { relativeTime } from "@/lib/dateUtils";
 
 const typeIcon: Record<string, React.ElementType> = {
   match: Heart,
@@ -128,7 +128,7 @@ export default function NotificationsPage() {
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5 leading-snug line-clamp-2">{n.body}</p>
                       <p className="text-[10px] text-muted-foreground/50 mt-1.5">
-                        {formatDistanceToNow(new Date(n.createdAt!), { addSuffix: true })}
+                        {relativeTime(n.createdAt)}
                       </p>
                     </div>
                   </motion.div>

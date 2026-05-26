@@ -522,13 +522,13 @@ export default function AgentPortalPage() {
                             ) : (
                               <AnimatePresence mode="wait">
                                 <motion.div
-                                  key={bookingAction.mode}
+                                  key={bookingAction!.mode}
                                   initial={{ opacity: 0, height: 0 }}
                                   animate={{ opacity: 1, height: "auto" }}
                                   exit={{ opacity: 0, height: 0 }}
                                   className="mt-3 space-y-2"
                                 >
-                                  {bookingAction.mode === "confirm" ? (
+                                  {bookingAction!.mode === "confirm" ? (
                                     <>
                                       <div className="grid grid-cols-2 gap-2">
                                         <div className="space-y-1">
@@ -556,11 +556,11 @@ export default function AgentPortalPage() {
                                       disabled={bookingMutation.isPending}
                                       onClick={() => bookingMutation.mutate({
                                         id: b.id,
-                                        body: bookingAction.mode === "confirm"
+                                        body: bookingAction!.mode === "confirm"
                                           ? { status: "confirmed", confirmedDate: confirmDate, confirmedTime: confirmTime, agentNotes: agentNotes || undefined }
                                           : { status: "declined", agentNotes: agentNotes || undefined },
                                       })}>
-                                      {bookingMutation.isPending ? "Saving…" : bookingAction.mode === "confirm" ? "Confirm Meeting" : "Decline Request"}
+                                      {bookingMutation.isPending ? "Saving…" : bookingAction!.mode === "confirm" ? "Confirm Meeting" : "Decline Request"}
                                     </Button>
                                     <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => { setBookingAction(null); setAgentNotes(""); }}>
                                       <X className="w-4 h-4" />

@@ -9,8 +9,15 @@ import { Search, SlidersHorizontal, X, CheckCircle, RefreshCw, TrendingUp, Chevr
 import AgentCard from "@/components/agent-card";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import type { Agent } from "@shared/schema";
 import { AnimatePresence, motion } from "framer-motion";
+
+function getGreeting(firstName?: string | null) {
+  const hour = new Date().getHours();
+  const time = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  return firstName ? `${time}, ${firstName}!` : `${time}!`;
+}
 
 interface Filters {
   search: string;
@@ -90,9 +97,10 @@ export default function DiscoverPage() {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [matchAnimation, setMatchAnimation] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: agents = [], isLoading } = useQuery<Agent[]>({
+  const { data: agents = [], isLoading } = useQuery<(Agent & { matchScore?: number })[]>({
     // Include filters in queryKey so React Query refetches when filters change
     queryKey: ["/api/agents", { scored: "true", ...filters }],
     queryFn: async () => {
@@ -136,7 +144,12 @@ export default function DiscoverPage() {
   const visibleAgents = agents.filter(a => !dismissed.has(a.id));
   const topAgents = visibleAgents.slice(0, 3);
 
-  const handleReset = () => {
+  const handleReset = async () => {
+    try {
+      await fetch("/api/likes", { method: "DELETE", credentials: "include" });
+    } catch {
+      // non-fatal — still clear client state
+    }
     setDismissed(new Set());
     queryClient.invalidateQueries({ queryKey: ["/api/agents", { scored: "true", ...filters }] });
   };
@@ -144,6 +157,15 @@ export default function DiscoverPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="flex-shrink-0 px-4 pt-3 pb-3 border-b border-border/60 bg-background">
+        {/* Personalized greeting — compact single line above search */}
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-semibold text-muted-foreground">{getGreeting(user?.firstName)}</p>
+          {visibleAgents.length > 0 && (
+            <span className="text-[10px] font-semibold text-primary/70 bg-primary/[0.08] px-2 py-0.5 rounded-full">
+              {visibleAgents.length} left
+            </span>
+          )}
+        </div>
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -288,12 +310,22 @@ export default function DiscoverPage() {
       </div>
 
       {visibleAgents.length > 0 && (
-        <div className="flex-shrink-0 px-4 pb-4 pt-2 border-t border-border bg-background/80 backdrop-blur">
+        <div className="flex-shrink-0 px-4 pb-4 pt-2.5 border-t border-border/60 bg-background/80 backdrop-blur">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">{visibleAgents.length} agents remaining</span>
-            <div className="flex gap-1">
-              {visibleAgents.slice(0, 5).map((_, i) => (
-                <div key={i} className={`w-1.5 h-1.5 rounded-full ${i === 0 ? "bg-primary" : "bg-muted-foreground/30"}`} />
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground">Swipe to match</span>
+              <span className="text-[10px] font-semibold text-primary bg-primary/[0.08] px-2 py-0.5 rounded-full">
+                {visibleAgents.length} / {agents.length}
+              </span>
+            </div>
+            <div className="flex gap-1.5">
+              {Array.from({ length: Math.min(visibleAgents.length, 5) }).map((_, i) => (
+                <div
+                  key={i}
+                  className={`rounded-full transition-all duration-200 ${
+                    i === 0 ? "w-4 h-1.5 bg-primary" : "w-1.5 h-1.5 bg-muted-foreground/25"
+                  }`}
+                />
               ))}
             </div>
           </div>

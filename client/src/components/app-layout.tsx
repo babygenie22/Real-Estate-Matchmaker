@@ -1,7 +1,7 @@
 import { useLocation, Link } from "wouter";
 import { Home, Heart, User, Shield, Compass, Bell } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import type { Notification } from "@shared/schema";
+import type { Notification, Match } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 
 const NAV_ITEMS = [
@@ -19,12 +19,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     queryKey: ["/api/notifications"],
     refetchInterval: 30000,
   });
-  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const { data: matches = [] } = useQuery<Match[]>({
+    queryKey: ["/api/matches"],
+  });
+
+  const unreadNotifs = notifications.filter((n) => !n.read).length;
+
+  // Badge helpers per nav item
+  const getBadge = (href: string) => {
+    if (href === "/notifications") return unreadNotifs > 0 ? (unreadNotifs > 9 ? "9+" : String(unreadNotifs)) : null;
+    if (href === "/matches") return matches.length > 0 ? String(matches.length) : null;
+    return null;
+  };
+
+  const getBadgeColor = (href: string) => {
+    if (href === "/notifications") return "bg-destructive text-destructive-foreground";
+    if (href === "/matches") return "bg-primary text-primary-foreground";
+    return "";
+  };
 
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
       {/* Header */}
-      <header className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-background/95 backdrop-blur-lg border-b border-border/60 z-10">
+      <header className="flex-shrink-0 flex items-center justify-between px-4 py-2.5 bg-background/95 backdrop-blur-lg border-b border-border/60 z-10">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center shadow-sm">
             <Home className="w-4 h-4 text-primary-foreground" />
@@ -34,17 +52,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <span className="text-[10px] text-muted-foreground block -mt-0.5 tracking-wide uppercase">Michigan</span>
           </div>
         </div>
-        {user?.role === "admin" && (
-          <Link href="/admin">
-            <button
-              aria-label="Admin dashboard"
-              className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${location === "/admin" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
-              data-testid="button-nav-admin"
-            >
-              <Shield className="w-4 h-4" />
-            </button>
-          </Link>
-        )}
+
+        <div className="flex items-center gap-1.5">
+          {user?.role === "admin" && (
+            <Link href="/admin">
+              <button
+                aria-label="Admin dashboard"
+                className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${location === "/admin" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+                data-testid="button-nav-admin"
+              >
+                <Shield className="w-4 h-4" />
+              </button>
+            </Link>
+          )}
+        </div>
       </header>
 
       <main className="flex-1 overflow-hidden">
@@ -56,7 +77,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="flex items-center px-1 py-1.5">
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
             const isActive = location === href || (href === "/discover" && location === "/");
-            const showBadge = href === "/notifications" && unreadCount > 0;
+            const badge = getBadge(href);
             return (
               <Link key={href} href={href} className="flex-1">
                 <button
@@ -65,9 +86,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 >
                   <div className={`relative flex items-center justify-center w-12 h-8 rounded-2xl transition-all duration-200 ${isActive ? "bg-primary/[0.15]" : ""}`}>
                     <Icon className={`w-[19px] h-[19px] transition-all duration-200 ${isActive ? "text-primary stroke-[2.2px]" : "text-muted-foreground stroke-[1.8px]"}`} />
-                    {showBadge && (
-                      <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full flex items-center justify-center px-0.5">
-                        {unreadCount > 9 ? "9+" : unreadCount}
+                    {badge && !isActive && (
+                      <span className={`absolute -top-0.5 -right-0.5 min-w-[16px] h-4 text-[9px] font-bold rounded-full flex items-center justify-center px-0.5 ${getBadgeColor(href)}`}>
+                        {badge}
                       </span>
                     )}
                   </div>

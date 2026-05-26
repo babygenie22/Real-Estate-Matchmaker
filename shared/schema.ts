@@ -153,3 +153,26 @@ export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
 
 export type AgentWithMatch = Agent & { matchId?: string };
+
+/** Discriminates who sent a message — used in both server routes and client rendering. */
+export const SENDER = {
+  USER: "user",
+  AGENT: "agent",
+} as const;
+export type SenderType = typeof SENDER[keyof typeof SENDER];
+
+/** Notification category values — used in storage, routes, and the notifications UI. */
+export const NOTIF_TYPE = {
+  MATCH: "match",
+  MESSAGE: "message",
+  BOOKING: "booking",
+  BOOKING_UPDATE: "booking_update",
+} as const;
+export type NotifType = typeof NOTIF_TYPE[keyof typeof NOTIF_TYPE];
+
+/** User roles. */
+export const ROLE = {
+  CONSUMER: "consumer",
+  AGENT: "agent",
+  ADMIN: "admin",
+} as const;

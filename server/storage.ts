@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, and, desc, sql, asc } from "drizzle-orm";
+import { eq, and, desc, sql, asc, inArray } from "drizzle-orm";
 import {
   users, agents, likes, matches, messages, bookings, notifications, reviews,
   type User, type InsertUser, type Agent, type InsertAgent,
@@ -42,6 +42,8 @@ export interface AgentFilters {
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(data: { email: string; passwordHash: string; firstName?: string; lastName?: string; role?: string; onboardingCompleted?: boolean }): Promise<User>;
   upsertUser(user: Partial<InsertUser> & { id: string }): Promise<User>;
   updateUserPreferences(id: string, prefs: Partial<InsertUser>): Promise<User>;
 
@@ -49,14 +51,15 @@ export interface IStorage {
   getAgent(id: string): Promise<Agent | undefined>;
   createAgent(agent: InsertAgent): Promise<Agent>;
   updateAgent(id: string, agent: Partial<InsertAgent>): Promise<Agent>;
-  getScoredAgents(userId: string, filters?: AgentFilters): Promise<Agent[]>;
+  getScoredAgents(userId: string, filters?: AgentFilters): Promise<(Agent & { matchScore: number })[]>;
   getAgentByUserId(userId: string): Promise<Agent | undefined>;
 
   createLike(like: InsertLike): Promise<Like>;
   getLikesByUser(userId: string): Promise<Like[]>;
+  resetLikesByUser(userId: string): Promise<void>;
 
   createMatch(match: InsertMatch): Promise<Match>;
-  getMatchesByUser(userId: string): Promise<(Match & { agent: Agent })[]>;
+  getMatchesByUser(userId: string): Promise<(Match & { agent: Agent; lastMessage?: Message })[]>;
   getMatchesByAgent(agentId: string): Promise<(Match & { user: User })[]>;
   getMatch(id: string): Promise<Match | undefined>;
 
@@ -87,6 +90,16 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async createUser(data: { email: string; passwordHash: string; firstName?: string; lastName?: string; role?: string; onboardingCompleted?: boolean }): Promise<User> {
+    const [user] = await db.insert(users).values(data as any).returning();
     return user;
   }
 
@@ -179,30 +192,32 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  async getScoredAgents(userId: string, filters?: AgentFilters): Promise<Agent[]> {
+  async getScoredAgents(userId: string, filters?: AgentFilters): Promise<(Agent & { matchScore: number })[]> {
     const user = await this.getUser(userId);
     const allAgents = await this.getAgents(filters, userId);
 
-    return allAgents.sort((a, b) => {
-      let scoreA = 0, scoreB = 0;
+    // Theoretical max: rating 5.0*20=100, transactions 50*0.5=25, S/L ratio ~1.0*10=10, DOM 0d → 30*0.3=9, style bonus=15 → ~159
+    const MAX_SCORE = 159;
 
-      scoreA += (a.rating || 0) * 20;
-      scoreB += (b.rating || 0) * 20;
-      scoreA += Math.min((a.transactionCount || 0), 50) * 0.5;
-      scoreB += Math.min((b.transactionCount || 0), 50) * 0.5;
-      scoreA += (a.saleToListRatio || 0.95) * 10;
-      scoreB += (b.saleToListRatio || 0.95) * 10;
-      scoreA += Math.max(0, 30 - (a.avgDaysOnMarket || 30)) * 0.3;
-      scoreB += Math.max(0, 30 - (b.avgDaysOnMarket || 30)) * 0.3;
-
-      if (user?.preferredStyle && a.personalityTags?.includes(user.preferredStyle)) scoreA += 15;
-      if (user?.preferredStyle && b.personalityTags?.includes(user.preferredStyle)) scoreB += 15;
-
-      return scoreB - scoreA;
+    const scored = allAgents.map(agent => {
+      let score = 0;
+      score += (agent.rating || 0) * 20;
+      score += Math.min((agent.transactionCount || 0), 50) * 0.5;
+      score += (agent.saleToListRatio || 0.95) * 10;
+      score += Math.max(0, 30 - (agent.avgDaysOnMarket || 30)) * 0.3;
+      if (user?.preferredStyle && agent.personalityTags?.includes(user.preferredStyle)) score += 15;
+      const matchScore = Math.min(100, Math.max(1, Math.round((score / MAX_SCORE) * 100)));
+      return { ...agent, matchScore };
     });
+
+    return scored.sort((a, b) => b.matchScore - a.matchScore);
   }
 
   async createLike(like: InsertLike): Promise<Like> {
+    // Idempotent: return the existing like if already recorded
+    const [existing] = await db.select().from(likes)
+      .where(and(eq(likes.userId, like.userId), eq(likes.agentId, like.agentId)));
+    if (existing) return existing;
     const [created] = await db.insert(likes).values(like as any).returning();
     if (like.liked) {
       const match = await this.createMatch({ userId: like.userId, agentId: like.agentId });
@@ -242,6 +257,11 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(likes).where(eq(likes.userId, userId));
   }
 
+  async resetLikesByUser(userId: string): Promise<void> {
+    // Delete likes (swipe history) so the deck refreshes — matches are in a separate table and are preserved
+    await db.delete(likes).where(eq(likes.userId, userId));
+  }
+
   async createMatch(match: InsertMatch): Promise<Match> {
     const existing = await db.select().from(matches)
       .where(and(eq(matches.userId, match.userId), eq(matches.agentId, match.agentId)));
@@ -250,24 +270,38 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async getMatchesByUser(userId: string): Promise<(Match & { agent: Agent })[]> {
+  async getMatchesByUser(userId: string): Promise<(Match & { agent: Agent; lastMessage?: Message })[]> {
     const userMatches = await db.select().from(matches).where(eq(matches.userId, userId)).orderBy(desc(matches.createdAt));
-    const result = [];
-    for (const m of userMatches) {
-      const agent = await this.getAgent(m.agentId);
-      if (agent) result.push({ ...m, agent });
+    if (userMatches.length === 0) return [];
+
+    const agentIds = Array.from(new Set(userMatches.map(m => m.agentId)));
+    const matchIds = userMatches.map(m => m.id);
+
+    // Batch-fetch agents and all recent messages in parallel (no N+1)
+    const [agentRows, allMessages] = await Promise.all([
+      db.select().from(agents).where(inArray(agents.id, agentIds)),
+      db.select().from(messages).where(inArray(messages.matchId, matchIds)).orderBy(desc(messages.createdAt)),
+    ]);
+
+    const agentMap = new Map(agentRows.map(a => [a.id, a]));
+    // Keep only the most-recent message per match (messages are DESC, so first hit wins)
+    const lastMsgMap = new Map<string, Message>();
+    for (const msg of allMessages) {
+      if (!lastMsgMap.has(msg.matchId)) lastMsgMap.set(msg.matchId, msg);
     }
-    return result;
+
+    return userMatches
+      .filter(m => agentMap.has(m.agentId))
+      .map(m => ({ ...m, agent: agentMap.get(m.agentId)!, lastMessage: lastMsgMap.get(m.id) }));
   }
 
   async getMatchesByAgent(agentId: string): Promise<(Match & { user: User })[]> {
     const agentMatches = await db.select().from(matches).where(eq(matches.agentId, agentId)).orderBy(desc(matches.createdAt));
-    const result = [];
-    for (const m of agentMatches) {
-      const user = await this.getUser(m.userId);
-      if (user) result.push({ ...m, user });
-    }
-    return result;
+    if (agentMatches.length === 0) return [];
+    const userIds = Array.from(new Set(agentMatches.map(m => m.userId)));
+    const userRows = await db.select().from(users).where(inArray(users.id, userIds));
+    const userMap = new Map(userRows.map(u => [u.id, u]));
+    return agentMatches.filter(m => userMap.has(m.userId)).map(m => ({ ...m, user: userMap.get(m.userId)! }));
   }
 
   async getMatch(id: string): Promise<Match | undefined> {
@@ -305,10 +339,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAdminStats() {
-    const [userCount] = await db.select({ count: sql<number>`count(*)` }).from(users);
-    const [agentCount] = await db.select({ count: sql<number>`count(*)` }).from(agents);
-    const [matchCount] = await db.select({ count: sql<number>`count(*)` }).from(matches);
-    const [subCount] = await db.select({ count: sql<number>`count(*)` }).from(agents).where(eq(agents.subscriptionStatus, "active"));
+    const [[userCount], [agentCount], [matchCount], [subCount]] = await Promise.all([
+      db.select({ count: sql<number>`count(*)` }).from(users),
+      db.select({ count: sql<number>`count(*)` }).from(agents),
+      db.select({ count: sql<number>`count(*)` }).from(matches),
+      db.select({ count: sql<number>`count(*)` }).from(agents).where(eq(agents.subscriptionStatus, "active")),
+    ]);
     return {
       totalUsers: Number(userCount.count),
       totalAgents: Number(agentCount.count),
@@ -351,22 +387,20 @@ export class DatabaseStorage implements IStorage {
 
   async getBookingsByUser(userId: string): Promise<(Booking & { agent: Agent })[]> {
     const userBookings = await db.select().from(bookings).where(eq(bookings.userId, userId)).orderBy(desc(bookings.createdAt));
-    const result = [];
-    for (const b of userBookings) {
-      const agent = await this.getAgent(b.agentId);
-      if (agent) result.push({ ...b, agent });
-    }
-    return result;
+    if (userBookings.length === 0) return [];
+    const agentIds = Array.from(new Set(userBookings.map(b => b.agentId)));
+    const agentRows = await db.select().from(agents).where(inArray(agents.id, agentIds));
+    const agentMap = new Map(agentRows.map(a => [a.id, a]));
+    return userBookings.filter(b => agentMap.has(b.agentId)).map(b => ({ ...b, agent: agentMap.get(b.agentId)! }));
   }
 
   async getBookingsByAgent(agentId: string): Promise<(Booking & { user: User })[]> {
     const agentBookings = await db.select().from(bookings).where(eq(bookings.agentId, agentId)).orderBy(desc(bookings.createdAt));
-    const result = [];
-    for (const b of agentBookings) {
-      const user = await this.getUser(b.userId);
-      if (user) result.push({ ...b, user });
-    }
-    return result;
+    if (agentBookings.length === 0) return [];
+    const userIds = Array.from(new Set(agentBookings.map(b => b.userId)));
+    const userRows = await db.select().from(users).where(inArray(users.id, userIds));
+    const userMap = new Map(userRows.map(u => [u.id, u]));
+    return agentBookings.filter(b => userMap.has(b.userId)).map(b => ({ ...b, user: userMap.get(b.userId)! }));
   }
 
   async updateBookingStatus(id: string, status: string, agentNotes?: string, confirmedDate?: string, confirmedTime?: string): Promise<Booking> {
@@ -441,12 +475,13 @@ export class DatabaseStorage implements IStorage {
 
   async getReviewsByAgent(agentId: string): Promise<(Review & { user: Pick<User, "firstName" | "lastName"> })[]> {
     const agentReviews = await db.select().from(reviews).where(eq(reviews.agentId, agentId)).orderBy(desc(reviews.createdAt));
-    const result = [];
-    for (const r of agentReviews) {
-      const user = await this.getUser(r.userId);
-      if (user) result.push({ ...r, user: { firstName: user.firstName, lastName: user.lastName } });
-    }
-    return result;
+    if (agentReviews.length === 0) return [];
+    const userIds = Array.from(new Set(agentReviews.map(r => r.userId)));
+    const userRows = await db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName }).from(users).where(inArray(users.id, userIds));
+    const userMap = new Map(userRows.map(u => [u.id, u]));
+    return agentReviews
+      .filter(r => userMap.has(r.userId))
+      .map(r => ({ ...r, user: { firstName: userMap.get(r.userId)!.firstName, lastName: userMap.get(r.userId)!.lastName } }));
   }
 
   async getReviewByUserAndAgent(userId: string, agentId: string): Promise<Review | undefined> {
