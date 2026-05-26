@@ -11,11 +11,16 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#2563eb"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.homematch.app"
+      "bundleIdentifier": "com.homematch.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "HomeMatch uses your camera to upload a profile photo.",
+        "NSPhotoLibraryUsageDescription": "HomeMatch accesses your photo library to upload a profile photo.",
+        "NSLocationWhenInUseUsageDescription": "HomeMatch uses your location to find agents near you."
+      }
     },
     "android": {
       "adaptiveIcon": {

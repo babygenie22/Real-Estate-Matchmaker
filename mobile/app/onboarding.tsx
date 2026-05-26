@@ -24,11 +24,11 @@ const STEPS = [
   {
     id: "location", emoji: "📍", title: "Where are you looking?", subtitle: "Choose your primary market",
     options: [
-      { label: "🌁 San Francisco Bay Area", value: "Bay Area, CA" },
-      { label: "🌴 Los Angeles", value: "Los Angeles, CA" },
-      { label: "🎸 Austin, TX", value: "Austin, TX" },
-      { label: "🌃 Chicago, IL", value: "Chicago, IL" },
-      { label: "🌲 Seattle, WA", value: "Seattle, WA" },
+      { label: "🏙️ Metro Detroit", value: "Metro Detroit, MI" },
+      { label: "🎓 Ann Arbor", value: "Ann Arbor, MI" },
+      { label: "🌿 Grand Rapids", value: "Grand Rapids, MI" },
+      { label: "🏛️ Lansing", value: "Lansing, MI" },
+      { label: "💎 Oakland County", value: "Oakland County, MI" },
     ],
   },
   {
@@ -39,6 +39,15 @@ const STEPS = [
       { label: "$600K – $1M", value: "$600K–$1M" },
       { label: "$1M – $2M", value: "$1M–$2M" },
       { label: "Over $2M", value: "Over $2M" },
+    ],
+  },
+  {
+    id: "timeline", emoji: "📅", title: "When are you looking to buy?", subtitle: "Your timeline helps us find agents ready to move at your pace",
+    options: [
+      { label: "🚀 ASAP — I'm ready now", value: "ASAP" },
+      { label: "📆 Within 3 months", value: "3 months" },
+      { label: "🗓️ Within 6 months", value: "6 months" },
+      { label: "🔭 Just exploring (6-12 months)", value: "12 months" },
     ],
   },
   {
@@ -74,6 +83,7 @@ const SUMMARY_LABELS: Record<string, string> = {
   role: "Role",
   location: "Location",
   budget: "Budget",
+  timeline: "Timeline",
   propertyType: "Property Type",
   preferredStyle: "Agent Style",
   communicationStyle: "Communication",
@@ -165,7 +175,7 @@ export default function OnboardingScreen() {
   async function handleSubmit() {
     setLoading(true);
     try {
-      await api.put("/api/users/preferences", answers);
+      await api.put("/api/users/preferences", { ...answers, timeline: answers.timeline });
       await refreshUser();
       router.replace("/(tabs)/discover");
     } catch (err: any) {

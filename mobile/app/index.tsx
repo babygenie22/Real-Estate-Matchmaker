@@ -15,6 +15,7 @@ export default function Index() {
   }
 
   if (!user) return <Redirect href="/(auth)" />;
+  if (user.role === "agent") return <Redirect href="/(agent-portal)/dashboard" />;
   if (!user.onboardingCompleted) return <Redirect href="/onboarding" />;
   return <Redirect href="/(tabs)/discover" />;
 }

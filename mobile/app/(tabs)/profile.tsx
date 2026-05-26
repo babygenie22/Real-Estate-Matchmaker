@@ -71,7 +71,16 @@ export default function ProfileScreen() {
         {/* Preferences */}
         {prefs.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Your Preferences</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Your Preferences</Text>
+              <TouchableOpacity
+                style={styles.editPrefBtn}
+                onPress={() => router.push("/onboarding")}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.editPrefText}>✏️ Edit</Text>
+              </TouchableOpacity>
+            </View>
             {prefs.map((p) => (
               <View key={p.label} style={styles.prefRow}>
                 <Text style={styles.prefLabel}>{p.label}</Text>
@@ -147,6 +156,17 @@ export default function ProfileScreen() {
           </View>
         )}
 
+        {/* Become an Agent (only for non-agents) */}
+        {user?.role !== "agent" && (
+          <TouchableOpacity
+            style={styles.becomeAgentBtn}
+            onPress={() => router.push("/(auth)/agent-register")}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.becomeAgentText}>🏡 Become an Agent</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Sign out */}
         <TouchableOpacity style={styles.signOutBtn} onPress={handleLogout}>
           <Text style={styles.signOutText}>Sign Out</Text>
@@ -167,7 +187,10 @@ const styles = StyleSheet.create({
   roleBadge: { backgroundColor: Colors.muted, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 4 },
   roleText: { fontSize: 12, color: Colors.mutedForeground, fontWeight: "600", textTransform: "capitalize" },
   section: { padding: 20, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  sectionTitle: { fontSize: 14, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 14 },
+  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
+  sectionTitle: { fontSize: 14, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5 },
+  editPrefBtn: { backgroundColor: Colors.primaryLight, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
+  editPrefText: { fontSize: 13, fontWeight: "600", color: Colors.primary },
   prefRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.muted },
   prefLabel: { fontSize: 15, color: Colors.mutedForeground },
   prefValue: { fontSize: 15, fontWeight: "600", color: Colors.foreground, flexShrink: 1, textAlign: "right", maxWidth: "55%" },
@@ -182,7 +205,18 @@ const styles = StyleSheet.create({
   statusConfirmed: { backgroundColor: "#dcfce7" },
   statusDeclined: { backgroundColor: "#fee2e2" },
   statusText: { fontSize: 11, fontWeight: "700", color: Colors.foreground },
-  signOutBtn: { margin: 20, borderRadius: 12, paddingVertical: 16, alignItems: "center", backgroundColor: "#fee2e2" },
+  becomeAgentBtn: {
+    marginHorizontal: 20,
+    marginTop: 20,
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: "center",
+    backgroundColor: Colors.primaryLight,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+  },
+  becomeAgentText: { color: Colors.primary, fontWeight: "700", fontSize: 16 },
+  signOutBtn: { margin: 20, marginTop: 12, borderRadius: 12, paddingVertical: 16, alignItems: "center", backgroundColor: "#fee2e2" },
   signOutText: { color: Colors.destructive, fontWeight: "700", fontSize: 16 },
   toolRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.muted },
   agentToolRow: { borderBottomWidth: 0 },

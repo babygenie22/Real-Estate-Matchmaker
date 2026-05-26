@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   View, Text, TouchableOpacity, StyleSheet, SafeAreaView,
-  Dimensions, ActivityIndicator, Alert,
+  Dimensions, ActivityIndicator, Alert, ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
 import SwipeCard from "@/components/SwipeCard";
@@ -26,17 +26,40 @@ interface Agent {
   yearsExperience: number | null;
 }
 
+const SPECIALTY_FILTERS = [
+  { label: "All", value: "" },
+  { label: "First-Time Buyers", value: "First-Time Buyers" },
+  { label: "Luxury Homes", value: "Luxury Homes" },
+  { label: "Investment", value: "Investment" },
+  { label: "New Construction", value: "New Construction" },
+  { label: "Relocation", value: "Relocation" },
+];
+
+const AREA_FILTERS = [
+  { label: "All Areas", value: "" },
+  { label: "Metro Detroit", value: "Metro Detroit" },
+  { label: "Ann Arbor", value: "Ann Arbor" },
+  { label: "Grand Rapids", value: "Grand Rapids" },
+  { label: "Lansing", value: "Lansing" },
+  { label: "Oakland County", value: "Oakland County" },
+];
+
 export default function DiscoverScreen() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeSpecialty, setActiveSpecialty] = useState("");
+  const [activeArea, setActiveArea] = useState("");
   const router = useRouter();
 
-  useEffect(() => { loadAgents(); }, []);
+  useEffect(() => { loadAgents(); }, [activeSpecialty, activeArea]);
 
   async function loadAgents() {
     try {
       setLoading(true);
-      const data = await api.get<Agent[]>("/api/agents?scored=true");
+      const params = new URLSearchParams({ scored: "true" });
+      if (activeSpecialty) params.set("specialty", activeSpecialty);
+      if (activeArea) params.set("area", activeArea);
+      const data = await api.get<Agent[]>(`/api/agents?${params.toString()}`);
       setAgents(data);
     } catch (err: any) {
       Alert.alert("Error", err.message);
@@ -81,15 +104,59 @@ export default function DiscoverScreen() {
         <Text style={styles.headerSub}>{agents.length} agents near you</Text>
       </View>
 
+      {/* Specialty filter chips */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterRow}
+        style={styles.filterScroll}
+      >
+        {SPECIALTY_FILTERS.map((f) => {
+          const isActive = activeSpecialty === f.value;
+          return (
+            <TouchableOpacity
+              key={f.value || "all-specialty"}
+              style={[styles.chip, isActive && styles.chipActive]}
+              onPress={() => setActiveSpecialty(f.value)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{f.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* Area filter chips */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterRow}
+        style={styles.filterScroll}
+      >
+        {AREA_FILTERS.map((f) => {
+          const isActive = activeArea === f.value;
+          return (
+            <TouchableOpacity
+              key={f.value || "all-area"}
+              style={[styles.chip, isActive && styles.chipActive]}
+              onPress={() => setActiveArea(f.value)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{f.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
       {/* Card stack */}
       <View style={styles.cardArea}>
         {agents.length === 0 ? (
-          <View style={styles.empty}>
+          <View style={styles.emptyState}>
             <Text style={styles.emptyEmoji}>🎉</Text>
-            <Text style={styles.emptyTitle}>You've seen everyone!</Text>
-            <Text style={styles.emptySub}>Check your matches or come back later.</Text>
+            <Text style={styles.emptyTitle}>You've seen all agents!</Text>
+            <Text style={styles.emptySub}>Check back soon for new matches in your area.</Text>
             <TouchableOpacity style={styles.refreshBtn} onPress={loadAgents}>
-              <Text style={styles.refreshText}>Refresh</Text>
+              <Text style={styles.refreshBtnText}>Refresh</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -139,6 +206,25 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
   headerTitle: { fontSize: 22, fontWeight: "800", color: Colors.foreground },
   headerSub: { fontSize: 13, color: Colors.mutedForeground, marginTop: 2 },
+  filterScroll: { flexGrow: 0 },
+  filterRow: { paddingHorizontal: 16, paddingVertical: 6, gap: 8, flexDirection: "row" },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: Colors.muted,
+  },
+  chipActive: {
+    backgroundColor: Colors.primary,
+  },
+  chipText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.foreground,
+  },
+  chipTextActive: {
+    color: "#ffffff",
+  },
   cardArea: {
     flex: 1,
     alignItems: "center",
@@ -155,12 +241,18 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     transform: [{ scale: 0.96 }, { translateY: 12 }],
   },
-  empty: { alignItems: "center", padding: 32, gap: 12 },
+  emptyState: { alignItems: "center", padding: 32, gap: 12 },
   emptyEmoji: { fontSize: 64 },
   emptyTitle: { fontSize: 22, fontWeight: "700", color: Colors.foreground },
   emptySub: { fontSize: 15, color: Colors.mutedForeground, textAlign: "center" },
-  refreshBtn: { backgroundColor: Colors.primary, borderRadius: 10, paddingHorizontal: 24, paddingVertical: 12, marginTop: 8 },
-  refreshText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  refreshBtn: {
+    backgroundColor: Colors.primary,
+    borderRadius: 10,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    marginTop: 8,
+  },
+  refreshBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
   actions: {
     flexDirection: "row",
     justifyContent: "center",

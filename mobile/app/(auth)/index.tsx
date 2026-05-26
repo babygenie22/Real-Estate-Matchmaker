@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert,
+  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert, Switch,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/lib/auth";
@@ -15,6 +15,7 @@ export default function AuthScreen() {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [isAgent, setIsAgent] = useState(false);
   const [loading, setLoading] = useState(false);
   const { login, register } = useAuth();
   const router = useRouter();
@@ -28,15 +29,25 @@ export default function AuthScreen() {
     try {
       if (tab === "login") {
         await login(email.trim(), password);
+        router.replace("/");
       } else {
         if (password.length < 6) {
           Alert.alert("Weak password", "Password must be at least 6 characters.");
           setLoading(false);
           return;
         }
+        if (isAgent) {
+          // Navigate to agent onboarding flow, passing credentials as params
+          router.push({
+            pathname: "/(auth)/agent-register",
+            params: { email: email.trim(), password },
+          });
+          setLoading(false);
+          return;
+        }
         await register({ email: email.trim(), password, firstName: firstName.trim() || undefined, lastName: lastName.trim() || undefined });
+        router.replace("/");
       }
-      router.replace("/");
     } catch (err: any) {
       Alert.alert("Error", err.message || "Something went wrong");
     } finally {
@@ -128,6 +139,21 @@ export default function AuthScreen() {
               />
             </View>
 
+            {tab === "register" && (
+              <View style={styles.agentToggleRow}>
+                <View style={styles.agentToggleInfo}>
+                  <Text style={styles.agentToggleLabel}>I'm a real estate agent</Text>
+                  <Text style={styles.agentToggleHint}>Set up your agent profile after this step</Text>
+                </View>
+                <Switch
+                  value={isAgent}
+                  onValueChange={setIsAgent}
+                  trackColor={{ false: Colors.border, true: Colors.primary }}
+                  thumbColor="#fff"
+                />
+              </View>
+            )}
+
             <TouchableOpacity
               style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
               onPress={handleSubmit}
@@ -138,7 +164,7 @@ export default function AuthScreen() {
                 <ActivityIndicator color="#fff" />
               ) : (
                 <Text style={styles.submitBtnText}>
-                  {tab === "login" ? "Log In" : "Create Account"}
+                  {tab === "login" ? "Log In" : isAgent ? "Set Up Agent Profile →" : "Create Account"}
                 </Text>
               )}
             </TouchableOpacity>
@@ -254,4 +280,19 @@ const styles = StyleSheet.create({
   switchRow: { flexDirection: "row", justifyContent: "center", marginTop: 18 },
   switchText: { fontSize: 14, color: Colors.mutedForeground },
   switchLink: { fontSize: 14, color: Colors.primary, fontWeight: "700" },
+
+  agentToggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: Colors.primaryLight,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: Colors.primary + "33",
+  },
+  agentToggleInfo: { flex: 1, marginRight: 12 },
+  agentToggleLabel: { fontSize: 14, fontWeight: "700", color: Colors.primary },
+  agentToggleHint: { fontSize: 12, color: Colors.mutedForeground, marginTop: 2 },
 });
