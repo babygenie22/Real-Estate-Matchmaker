@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,15 +7,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
+  Animated,
 } from "react-native";
 import { Stack } from "expo-router";
 import { Colors } from "@/lib/constants";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-} from "react-native-reanimated";
 
 const fmt = (n: number) =>
   n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
@@ -39,13 +34,13 @@ function ResultCard({
   sub?: string;
   color?: string;
 }) {
-  const scale = useSharedValue(0.85);
-  const aStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  // trigger entrance animation
-  scale.value = withSpring(1, { damping: 12 });
+  const scale = useRef(new Animated.Value(0.85)).current;
+  useEffect(() => {
+    Animated.spring(scale, { toValue: 1, damping: 12, useNativeDriver: true }).start();
+  }, []);
 
   return (
-    <Animated.View style={[styles.resultCard, aStyle]}>
+    <Animated.View style={[styles.resultCard, { transform: [{ scale }] }]}>
       <Text style={[styles.resultValue, color ? { color } : null]}>{value}</Text>
       <Text style={styles.resultLabel}>{label}</Text>
       {sub && <Text style={styles.resultSub}>{sub}</Text>}

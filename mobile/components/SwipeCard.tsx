@@ -1,14 +1,8 @@
-import React from "react";
-import { View, Text, Image, StyleSheet, Dimensions } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  runOnJS,
-  interpolate,
-  Extrapolation,
-} from "react-native-reanimated";
+import React, { useRef } from "react";
+import {
+  View, Text, Image, StyleSheet, Dimensions,
+  PanResponder, Animated,
+} from "react-native";
 import { Colors } from "@/lib/constants";
 
 const { width: SCREEN_W } = Dimensions.get("window");
@@ -40,138 +34,177 @@ interface SwipeCardProps {
 }
 
 export default function SwipeCard({ agent, onLike, onPass, onPress, isTop }: SwipeCardProps) {
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
+  const position = useRef(new Animated.ValueXY()).current;
+  const lastTap = useRef<number>(0);
 
-  const gesture = Gesture.Pan()
-    .enabled(isTop)
-    .onUpdate((e) => {
-      translateX.value = e.translationX;
-      translateY.value = e.translationY * 0.25;
-    })
-    .onEnd((e) => {
-      if (e.translationX > SWIPE_THRESHOLD) {
-        translateX.value = withSpring(SCREEN_W * 1.5, { damping: 14 });
-        runOnJS(onLike)();
-      } else if (e.translationX < -SWIPE_THRESHOLD) {
-        translateX.value = withSpring(-SCREEN_W * 1.5, { damping: 14 });
-        runOnJS(onPass)();
-      } else {
-        translateX.value = withSpring(0, { damping: 18, stiffness: 200 });
-        translateY.value = withSpring(0, { damping: 18, stiffness: 200 });
-      }
-    });
-
-  const tapGesture = Gesture.Tap().onEnd(() => { runOnJS(onPress)(); });
-  const composed = Gesture.Simultaneous(gesture, tapGesture);
-
-  const animStyle = useAnimatedStyle(() => {
-    const rotate = interpolate(translateX.value, [-SCREEN_W / 2, 0, SCREEN_W / 2], [-15, 0, 15], Extrapolation.CLAMP);
-    return {
-      transform: [
-        { translateX: translateX.value },
-        { translateY: translateY.value },
-        { rotate: `${rotate}deg` },
-      ],
-    };
+  const rotate = position.x.interpolate({
+    inputRange: [-SCREEN_W / 2, 0, SCREEN_W / 2],
+    outputRange: ["-15deg", "0deg", "15deg"],
+    extrapolate: "clamp",
   });
 
-  const likeOpacity = useAnimatedStyle(() => ({
-    opacity: interpolate(translateX.value, [20, SWIPE_THRESHOLD], [0, 1], Extrapolation.CLAMP),
-  }));
+  const likeOpacity = position.x.interpolate({
+    inputRange: [20, SWIPE_THRESHOLD],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
 
-  const passOpacity = useAnimatedStyle(() => ({
-    opacity: interpolate(translateX.value, [-SWIPE_THRESHOLD, -20], [1, 0], Extrapolation.CLAMP),
-  }));
+  const passOpacity = position.x.interpolate({
+    inputRange: [-SWIPE_THRESHOLD, -20],
+    outputRange: [1, 0],
+    extrapolate: "clamp",
+  });
 
-  const photoUri = agent.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&size=400&background=dbeafe&color=2563eb`;
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => isTop,
+      onMoveShouldSetPanResponder: (_, gs) => isTop && (Math.abs(gs.dx) > 5 || Math.abs(gs.dy) > 5),
+      onPanResponderGrant: () => {
+        position.setOffset({ x: (position.x as any).__getValue(), y: 0 });
+        position.setValue({ x: 0, y: 0 });
+      },
+      onPanResponderMove: Animated.event(
+        [null, { dx: position.x, dy: position.y }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: (_, gs) => {
+        position.flattenOffset();
+        const now = Date.now();
+        const isTap = Math.abs(gs.dx) < 5 && Math.abs(gs.dy) < 5 && gs.numberActiveTouches === 0;
+
+        if (isTap && now - lastTap.current < 300) {
+          // double tap — treat as single tap
+        } else if (isTap) {
+          lastTap.current = now;
+          Animated.spring(position, {
+            toValue: { x: 0, y: 0 },
+            useNativeDriver: false,
+            damping: 18,
+            stiffness: 200,
+          }).start();
+          onPress();
+          return;
+        }
+
+        if (gs.dx > SWIPE_THRESHOLD) {
+          Animated.spring(position, {
+            toValue: { x: SCREEN_W * 1.5, y: gs.dy },
+            useNativeDriver: false,
+            damping: 14,
+          }).start(() => onLike());
+        } else if (gs.dx < -SWIPE_THRESHOLD) {
+          Animated.spring(position, {
+            toValue: { x: -SCREEN_W * 1.5, y: gs.dy },
+            useNativeDriver: false,
+            damping: 14,
+          }).start(() => onPass());
+        } else {
+          Animated.spring(position, {
+            toValue: { x: 0, y: 0 },
+            useNativeDriver: false,
+            damping: 18,
+            stiffness: 200,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  const photoUri =
+    agent.photo ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&size=400&background=dbeafe&color=2563eb`;
 
   return (
-    <GestureDetector gesture={composed}>
-      <Animated.View style={[styles.card, animStyle]}>
-        <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
+    <Animated.View
+      style={[
+        styles.card,
+        {
+          transform: [
+            { translateX: position.x },
+            { translateY: position.y },
+            { rotate },
+          ],
+        },
+      ]}
+      {...(isTop ? panResponder.panHandlers : {})}
+    >
+      <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
 
-        {/* Gradient layers (top shadow + bottom content area) */}
-        <View style={styles.gradientTopFade} />
-        <View style={styles.gradientBottomFade} />
+      {/* Shadow overlays */}
+      <View style={styles.gradientTopFade} />
+      <View style={styles.gradientBottomFade} />
 
-        {/* LIKE stamp */}
-        <Animated.View style={[styles.stamp, styles.likeStamp, likeOpacity]}>
-          <Text style={styles.likeStampText}>LIKE 💚</Text>
-        </Animated.View>
+      {/* LIKE stamp */}
+      <Animated.View style={[styles.stamp, styles.likeStamp, { opacity: likeOpacity }]}>
+        <Text style={styles.likeStampText}>LIKE 💚</Text>
+      </Animated.View>
 
-        {/* PASS stamp */}
-        <Animated.View style={[styles.stamp, styles.passStamp, passOpacity]}>
-          <Text style={styles.passStampText}>PASS ✕</Text>
-        </Animated.View>
+      {/* PASS stamp */}
+      <Animated.View style={[styles.stamp, styles.passStamp, { opacity: passOpacity }]}>
+        <Text style={styles.passStampText}>PASS ✕</Text>
+      </Animated.View>
 
-        {/* Info overlay */}
-        <View style={styles.infoOverlay}>
-          {/* Name + exp */}
-          <View style={styles.nameRow}>
-            <Text style={styles.name} numberOfLines={1}>{agent.name}</Text>
-            {agent.yearsExperience != null && (
-              <View style={styles.expBadge}>
-                <Text style={styles.expText}>{agent.yearsExperience}yr</Text>
-              </View>
-            )}
-          </View>
-
-          {/* Rating */}
-          {agent.rating != null && (
-            <View style={styles.ratingRow}>
-              <Text style={styles.ratingStar}>⭐</Text>
-              <Text style={styles.ratingVal}>{agent.rating.toFixed(1)}</Text>
-              <Text style={styles.ratingCount}>({agent.reviewCount})</Text>
-              <Text style={styles.ratingDot}>·</Text>
-              <Text style={styles.ratingDeals}>{agent.transactionCount} deals</Text>
-            </View>
-          )}
-
-          {/* Service areas */}
-          {agent.serviceAreas && agent.serviceAreas.length > 0 && (
-            <Text style={styles.areas} numberOfLines={1}>
-              📍 {agent.serviceAreas.slice(0, 3).join(", ")}
-            </Text>
-          )}
-
-          {/* Stats row */}
-          {(agent.avgDaysOnMarket != null || agent.saleToListRatio != null) && (
-            <View style={styles.statsRow}>
-              {agent.avgDaysOnMarket != null && (
-                <View style={styles.statChip}>
-                  <Text style={styles.statVal}>{agent.avgDaysOnMarket}d</Text>
-                  <Text style={styles.statLabel}>Avg DOM</Text>
-                </View>
-              )}
-              {agent.saleToListRatio != null && (
-                <View style={styles.statChip}>
-                  <Text style={styles.statVal}>{(agent.saleToListRatio * 100).toFixed(0)}%</Text>
-                  <Text style={styles.statLabel}>S/L Ratio</Text>
-                </View>
-              )}
-              {agent.transactionCount != null && (
-                <View style={styles.statChip}>
-                  <Text style={styles.statVal}>{agent.transactionCount}</Text>
-                  <Text style={styles.statLabel}>Deals</Text>
-                </View>
-              )}
-            </View>
-          )}
-
-          {/* Specialties */}
-          {agent.specialties && agent.specialties.length > 0 && (
-            <View style={styles.tags}>
-              {agent.specialties.slice(0, 3).map((s) => (
-                <View key={s} style={styles.tag}>
-                  <Text style={styles.tagText}>{s}</Text>
-                </View>
-              ))}
+      {/* Info overlay */}
+      <View style={styles.infoOverlay}>
+        <View style={styles.nameRow}>
+          <Text style={styles.name} numberOfLines={1}>{agent.name}</Text>
+          {agent.yearsExperience != null && (
+            <View style={styles.expBadge}>
+              <Text style={styles.expText}>{agent.yearsExperience}yr</Text>
             </View>
           )}
         </View>
-      </Animated.View>
-    </GestureDetector>
+
+        {agent.rating != null && (
+          <View style={styles.ratingRow}>
+            <Text style={styles.ratingStar}>⭐</Text>
+            <Text style={styles.ratingVal}>{agent.rating.toFixed(1)}</Text>
+            <Text style={styles.ratingCount}>({agent.reviewCount})</Text>
+            <Text style={styles.ratingDot}>·</Text>
+            <Text style={styles.ratingDeals}>{agent.transactionCount} deals</Text>
+          </View>
+        )}
+
+        {agent.serviceAreas && agent.serviceAreas.length > 0 && (
+          <Text style={styles.areas} numberOfLines={1}>
+            📍 {agent.serviceAreas.slice(0, 3).join(", ")}
+          </Text>
+        )}
+
+        {(agent.avgDaysOnMarket != null || agent.saleToListRatio != null) && (
+          <View style={styles.statsRow}>
+            {agent.avgDaysOnMarket != null && (
+              <View style={styles.statChip}>
+                <Text style={styles.statVal}>{agent.avgDaysOnMarket}d</Text>
+                <Text style={styles.statLabel}>Avg DOM</Text>
+              </View>
+            )}
+            {agent.saleToListRatio != null && (
+              <View style={styles.statChip}>
+                <Text style={styles.statVal}>{(agent.saleToListRatio * 100).toFixed(0)}%</Text>
+                <Text style={styles.statLabel}>S/L Ratio</Text>
+              </View>
+            )}
+            {agent.transactionCount != null && (
+              <View style={styles.statChip}>
+                <Text style={styles.statVal}>{agent.transactionCount}</Text>
+                <Text style={styles.statLabel}>Deals</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {agent.specialties && agent.specialties.length > 0 && (
+          <View style={styles.tags}>
+            {agent.specialties.slice(0, 3).map((s) => (
+              <View key={s} style={styles.tag}>
+                <Text style={styles.tagText}>{s}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+    </Animated.View>
   );
 }
 

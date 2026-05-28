@@ -1,11 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   SafeAreaView, ScrollView, Alert, ActivityIndicator,
-  KeyboardAvoidingView, Platform,
+  KeyboardAvoidingView, Platform, Image, Animated,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, Easing } from "react-native-reanimated";
 import { api, setToken } from "@/lib/api";
 import { Colors } from "@/lib/constants";
 
@@ -44,22 +43,24 @@ function formatPrice(value: number): string {
 }
 
 function ProgressBar({ step }: { step: number }) {
-  const progressWidth = useSharedValue(((step + 1) / TOTAL_STEPS) * 100);
+  const progressAnim = useRef(new Animated.Value(((step + 1) / TOTAL_STEPS) * 100)).current;
 
   useEffect(() => {
-    progressWidth.value = withTiming(((step + 1) / TOTAL_STEPS) * 100, {
+    Animated.timing(progressAnim, {
+      toValue: ((step + 1) / TOTAL_STEPS) * 100,
       duration: 400,
-      easing: Easing.out(Easing.quad),
-    });
+      useNativeDriver: false,
+    }).start();
   }, [step]);
 
-  const progressStyle = useAnimatedStyle(() => ({
-    width: `${progressWidth.value}%`,
-  }));
+  const widthInterpolated = progressAnim.interpolate({
+    inputRange: [0, 100],
+    outputRange: ["0%", "100%"],
+  });
 
   return (
     <View style={styles.progressTrack}>
-      <Animated.View style={[styles.progressFill, progressStyle]} />
+      <Animated.View style={[styles.progressFill, { width: widthInterpolated }]} />
     </View>
   );
 }
@@ -125,21 +126,29 @@ export default function AgentRegisterScreen() {
   const [photo, setPhoto] = useState("");
 
   // Animation
-  const slideX = useSharedValue(0);
-  const opacity = useSharedValue(1);
+  const slideX = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(1)).current;
+  const slideDirectionRef = useRef<number>(0);
 
-  const contentStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: slideX.value }],
-    opacity: opacity.value,
-  }));
+  const contentStyle = {
+    transform: [{ translateX: slideX }],
+    opacity,
+  };
+
+  // Fade in whenever step changes — guarantees new content is rendered first
+  useEffect(() => {
+    slideX.setValue(slideDirectionRef.current);
+    Animated.parallel([
+      Animated.spring(slideX, { toValue: 0, damping: 20, stiffness: 300, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+    ]).start();
+  }, [step]);
 
   function animateToStep(direction: "forward" | "back", callback: () => void) {
     const offset = direction === "forward" ? -30 : 30;
-    opacity.value = withTiming(0, { duration: 150 }, () => {
-      slideX.value = -offset;
-      callback();
-      slideX.value = withSpring(0, { damping: 20, stiffness: 300 });
-      opacity.value = withTiming(1, { duration: 200 });
+    slideDirectionRef.current = -offset;
+    Animated.timing(opacity, { toValue: 0, duration: 150, useNativeDriver: true }).start(({ finished }) => {
+      if (finished) callback();
     });
   }
 
@@ -473,13 +482,28 @@ export default function AgentRegisterScreen() {
               <Text style={styles.subtitle}>Add a professional headshot so buyers can put a face to your name</Text>
             </View>
 
+            {/* Photo preview */}
+            <View style={styles.photoPreviewWrap}>
+              {photo ? (
+                <Image source={{ uri: photo }} style={styles.photoPreview} resizeMode="cover" />
+              ) : (
+                <View style={styles.photoPlaceholder}>
+                  <Text style={styles.photoPlaceholderIcon}>👤</Text>
+                </View>
+              )}
+              {photo ? (
+                <TouchableOpacity style={styles.removePhotoBtn} onPress={() => setPhoto("")}>
+                  <Text style={styles.removePhotoBtnText}>✕ Remove</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
             <View style={styles.fieldGroup}>
               <View style={styles.fieldWrap}>
-                <Text style={styles.fieldLabel}>Profile Photo URL (optional)</Text>
-                <Text style={styles.fieldHint}>Paste a link to your professional headshot</Text>
+                <Text style={styles.fieldLabel}>Photo URL</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="https://example.com/my-photo.jpg"
+                  placeholder="https://example.com/headshot.jpg"
                   value={photo}
                   onChangeText={setPhoto}
                   autoCapitalize="none"
@@ -487,6 +511,7 @@ export default function AgentRegisterScreen() {
                   keyboardType="url"
                   placeholderTextColor={Colors.mutedForeground}
                 />
+                <Text style={styles.fieldHint}>Paste a link to your professional headshot (LinkedIn, company website, etc.)</Text>
               </View>
             </View>
           </ScrollView>
@@ -721,4 +746,27 @@ const styles = StyleSheet.create({
   },
   nextBtnDisabled: { opacity: 0.4 },
   nextText: { color: "#fff", fontWeight: "800", fontSize: 16, letterSpacing: 0.2 },
+
+  // Photo step
+  photoPreviewWrap: { alignItems: "center", marginBottom: 24 },
+  photoPreview: { width: 120, height: 120, borderRadius: 60, borderWidth: 3, borderColor: Colors.primary },
+  photoPlaceholder: {
+    width: 120, height: 120, borderRadius: 60,
+    backgroundColor: Colors.muted, borderWidth: 2, borderColor: Colors.border,
+    alignItems: "center", justifyContent: "center",
+  },
+  photoPlaceholderIcon: { fontSize: 48 },
+  removePhotoBtn: { marginTop: 10, paddingVertical: 6, paddingHorizontal: 14, borderRadius: 20, backgroundColor: Colors.destructiveLight },
+  removePhotoBtnText: { fontSize: 13, color: Colors.destructive, fontWeight: "700" },
+  uploadBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 10, paddingVertical: 16, borderRadius: 14,
+    borderWidth: 2, borderColor: Colors.primary, borderStyle: "dashed",
+    backgroundColor: Colors.primaryLight,
+  },
+  uploadBtnIcon: { fontSize: 22 },
+  uploadBtnText: { fontSize: 16, fontWeight: "700", color: Colors.primary },
+  dividerRow: { flexDirection: "row", alignItems: "center", gap: 12, marginVertical: 4 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: Colors.border },
+  dividerLabel: { fontSize: 13, color: Colors.mutedForeground, fontWeight: "500" },
 });

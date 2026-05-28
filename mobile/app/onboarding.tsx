@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   View, Text, TouchableOpacity, StyleSheet, SafeAreaView,
-  ScrollView, Alert, ActivityIndicator, Dimensions,
+  ScrollView, Alert, ActivityIndicator, Dimensions, Animated,
 } from "react-native";
 import { useRouter } from "expo-router";
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, Easing } from "react-native-reanimated";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { Colors } from "@/lib/constants";
@@ -93,7 +92,7 @@ function ProgressDots({ total, current }: { total: number; current: number }) {
   return (
     <View style={dotStyles.row}>
       {Array.from({ length: total }).map((_, i) => (
-        <Animated.View
+        <View
           key={i}
           style={[dotStyles.dot, i === current ? dotStyles.dotActive : i < current ? dotStyles.dotDone : dotStyles.dotPending]}
         />
@@ -118,31 +117,42 @@ export default function OnboardingScreen() {
   const { refreshUser } = useAuth();
   const router = useRouter();
 
-  const slideX = useSharedValue(0);
-  const opacity = useSharedValue(1);
-
-  const progressWidth = useSharedValue(((1) / STEPS.length) * 100);
+  const slideX = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(1)).current;
+  const progressAnim = useRef(new Animated.Value((1 / STEPS.length) * 100)).current;
+  const slideDirectionRef = useRef<number>(0);
 
   useEffect(() => {
-    progressWidth.value = withTiming(((step + 1) / STEPS.length) * 100, { duration: 400, easing: Easing.out(Easing.quad) });
+    Animated.timing(progressAnim, {
+      toValue: ((step + 1) / STEPS.length) * 100,
+      duration: 400,
+      useNativeDriver: false,
+    }).start();
   }, [step]);
 
-  const progressStyle = useAnimatedStyle(() => ({
-    width: `${progressWidth.value}%`,
-  }));
+  const progressWidthInterp = progressAnim.interpolate({
+    inputRange: [0, 100],
+    outputRange: ["0%", "100%"],
+  });
 
-  const contentStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: slideX.value }],
-    opacity: opacity.value,
-  }));
+  const contentStyle = {
+    transform: [{ translateX: slideX }],
+    opacity,
+  };
+
+  useEffect(() => {
+    slideX.setValue(slideDirectionRef.current);
+    Animated.parallel([
+      Animated.spring(slideX, { toValue: 0, damping: 20, stiffness: 300, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+    ]).start();
+  }, [step]);
 
   function animateToStep(direction: "forward" | "back", callback: () => void) {
     const offset = direction === "forward" ? -30 : 30;
-    opacity.value = withTiming(0, { duration: 150 }, () => {
-      slideX.value = -offset;
-      callback();
-      slideX.value = withSpring(0, { damping: 20, stiffness: 300 });
-      opacity.value = withTiming(1, { duration: 200 });
+    slideDirectionRef.current = -offset;
+    Animated.timing(opacity, { toValue: 0, duration: 150, useNativeDriver: true }).start(({ finished }) => {
+      if (finished) callback();
     });
   }
 
@@ -189,7 +199,7 @@ export default function OnboardingScreen() {
     <SafeAreaView style={styles.container}>
       {/* Animated progress bar */}
       <View style={styles.progressTrack}>
-        <Animated.View style={[styles.progressFill, progressStyle]} />
+        <Animated.View style={[styles.progressFill, { width: progressWidthInterp }]} />
       </View>
 
       {!showSummary ? (
