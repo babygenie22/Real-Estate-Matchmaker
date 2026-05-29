@@ -9,9 +9,12 @@ import { useAuth } from "@/lib/auth";
 import { Colors } from "@/lib/constants";
 
 interface AgentStats {
-  todayMatches: number;
+  totalMatches: number;
   pendingBookings: number;
+  confirmedBookings: number;
   totalReviews: number;
+  averageRating: number;
+  isApproved: boolean;
 }
 
 interface BuyerMatch {
@@ -153,34 +156,65 @@ export default function AgentDashboard() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
       >
+        {/* Pending Approval Banner */}
+        {stats && stats.isApproved === false && (
+          <View style={styles.pendingBanner}>
+            <Text style={styles.pendingBannerTitle}>⏳ Profile Under Review</Text>
+            <Text style={styles.pendingBannerBody}>
+              Your profile is pending admin approval. It will appear in buyer searches once approved.
+            </Text>
+          </View>
+        )}
+
         {/* Header */}
         <View style={styles.header}>
-          <View>
+          <View style={{ flex: 1, marginRight: 12 }}>
             <Text style={styles.greeting}>Welcome back,</Text>
-            <Text style={styles.agentName}>{agentName}</Text>
+            <View style={styles.agentNameRow}>
+              <Text style={styles.agentName}>{agentName}</Text>
+              {stats?.isApproved === true && (
+                <View style={styles.approvedBadge}>
+                  <Text style={styles.approvedBadgeText}>✓ Approved</Text>
+                </View>
+              )}
+            </View>
+            {stats && stats.averageRating > 0 && (
+              <Text style={styles.ratingText}>
+                ⭐ {stats.averageRating.toFixed(1)}  ·  {stats.totalReviews} review{stats.totalReviews !== 1 ? "s" : ""}
+              </Text>
+            )}
             <View style={styles.agentBadge}>
               <Text style={styles.agentBadgeText}>🏡 Agent Dashboard</Text>
             </View>
           </View>
-          <TouchableOpacity
-            style={styles.logoutBtn}
-            onPress={() => {
-              Alert.alert("Log Out", "Are you sure you want to log out?", [
-                { text: "Cancel", style: "cancel" },
-                { text: "Log Out", style: "destructive", onPress: () => { logout(); router.replace("/(auth)"); } },
-              ]);
-            }}
-          >
-            <Text style={styles.logoutText}>Log Out</Text>
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.switchModeBtn}
+              onPress={() => router.replace("/(tabs)/discover")}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.switchModeText}>🏠 Buyer View</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.logoutBtn}
+              onPress={() => {
+                Alert.alert("Log Out", "Are you sure you want to log out?", [
+                  { text: "Cancel", style: "cancel" },
+                  { text: "Log Out", style: "destructive", onPress: () => { logout(); router.replace("/(auth)"); } },
+                ]);
+              }}
+            >
+              <Text style={styles.logoutText}>Log Out</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Stats Row */}
         {stats && (
           <View style={styles.statsRow}>
-            <StatCard label="Today's Matches" value={stats.todayMatches ?? 0} />
-            <StatCard label="Pending Bookings" value={stats.pendingBookings ?? 0} />
-            <StatCard label="Total Reviews" value={stats.totalReviews ?? 0} />
+            <StatCard label="Total Matches" value={stats.totalMatches ?? 0} />
+            <StatCard label="Pending" value={stats.pendingBookings ?? 0} />
+            <StatCard label="Reviews" value={stats.totalReviews ?? 0} />
           </View>
         )}
 
@@ -286,6 +320,15 @@ export default function AgentDashboard() {
           )}
         </View>
 
+        {/* Messages Link */}
+        <TouchableOpacity
+          style={styles.messagesBtn}
+          onPress={() => router.push("/(agent-portal)/chats" as any)}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.messagesBtnText}>💬 Messages →</Text>
+        </TouchableOpacity>
+
         {/* Edit Profile Link */}
         <TouchableOpacity
           style={styles.editProfileBtn}
@@ -308,6 +351,17 @@ const styles = StyleSheet.create({
   loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12 },
   loadingText: { color: Colors.mutedForeground, fontSize: 15 },
 
+  pendingBanner: {
+    backgroundColor: Colors.warningLight,
+    borderWidth: 1,
+    borderColor: Colors.warning,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 20,
+  },
+  pendingBannerTitle: { fontSize: 14, fontWeight: "800", color: Colors.warning, marginBottom: 4 },
+  pendingBannerBody: { fontSize: 13, color: Colors.warning, lineHeight: 18 },
+
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -315,7 +369,19 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   greeting: { fontSize: 14, color: Colors.mutedForeground, fontWeight: "500" },
-  agentName: { fontSize: 26, fontWeight: "800", color: Colors.foreground, marginTop: 2, letterSpacing: -0.5 },
+  agentNameRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 2 },
+  agentName: { fontSize: 26, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 },
+  approvedBadge: {
+    backgroundColor: Colors.successLight,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: Colors.success + "44",
+    alignSelf: "center",
+  },
+  approvedBadgeText: { fontSize: 12, fontWeight: "700", color: Colors.success },
+  ratingText: { fontSize: 13, color: Colors.mutedForeground, fontWeight: "600", marginTop: 4 },
   agentBadge: {
     marginTop: 6,
     backgroundColor: Colors.primaryLight,
@@ -325,6 +391,16 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   agentBadgeText: { fontSize: 12, fontWeight: "700", color: Colors.primary },
+  headerActions: { gap: 8, alignItems: "flex-end" },
+  switchModeBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: Colors.primaryLight,
+    borderWidth: 1.5,
+    borderColor: Colors.primary + "44",
+  },
+  switchModeText: { fontSize: 13, fontWeight: "700", color: Colors.primary },
   logoutBtn: {
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -469,6 +545,20 @@ const styles = StyleSheet.create({
     borderColor: Colors.destructive + "44",
   },
   declineBtnText: { color: Colors.destructive, fontWeight: "700", fontSize: 14 },
+
+  messagesBtn: {
+    backgroundColor: Colors.primary,
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: "center",
+    marginBottom: 10,
+    shadowColor: Colors.primary,
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  messagesBtnText: { color: "#fff", fontWeight: "800", fontSize: 16 },
 
   editProfileBtn: {
     backgroundColor: Colors.card,
