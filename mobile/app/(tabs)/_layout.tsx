@@ -3,11 +3,18 @@ import { Tabs } from "expo-router";
 import { Text, View } from "react-native";
 import { Colors } from "@/lib/constants";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 function TabIcon({ emoji, focused, badge }: { emoji: string; focused: boolean; badge?: number }) {
   return (
     <View style={{ alignItems: "center", justifyContent: "center" }}>
-      <Text style={{ fontSize: focused ? 24 : 22, opacity: focused ? 1 : 0.55 }}>{emoji}</Text>
+      {focused ? (
+        <View style={{ backgroundColor: Colors.primaryLight, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}>
+          <Text style={{ fontSize: 20 }}>{emoji}</Text>
+        </View>
+      ) : (
+        <Text style={{ fontSize: 20, opacity: 0.55 }}>{emoji}</Text>
+      )}
       {badge != null && badge > 0 && (
         <View style={{
           position: "absolute",
@@ -31,20 +38,32 @@ function TabIcon({ emoji, focused, badge }: { emoji: string; focused: boolean; b
 }
 
 export default function TabsLayout() {
-  const [unread, setUnread] = useState(0);
+  const { user } = useAuth();
+  const [unread, setUnread] = useState<number | undefined>(undefined);
+  const [matchCount, setMatchCount] = useState<number | undefined>(undefined);
 
   useEffect(() => {
+    if (!user) return;
     let cancelled = false;
+
     async function poll() {
       try {
-        const data = await api.get<any[]>("/api/notifications");
-        if (!cancelled) setUnread(data.filter((n: any) => !n.read).length);
+        const [notifications, matches] = await Promise.all([
+          api.get<any[]>("/api/notifications"),
+          api.get<any[]>("/api/matches"),
+        ]);
+        if (!cancelled) {
+          const unreadCount = notifications.filter((n: any) => !n.read).length;
+          setUnread(unreadCount > 0 ? unreadCount : undefined);
+          setMatchCount(matches.length > 0 ? matches.length : undefined);
+        }
       } catch {}
     }
+
     poll();
     const interval = setInterval(poll, 30000);
     return () => { cancelled = true; clearInterval(interval); };
-  }, []);
+  }, [user]);
 
   return (
     <Tabs
@@ -55,16 +74,17 @@ export default function TabsLayout() {
         tabBarStyle: {
           borderTopColor: Colors.cardBorder,
           backgroundColor: Colors.background,
-          paddingBottom: 6,
+          paddingBottom: 8,
           paddingTop: 4,
-          height: 64,
+          height: 68,
           shadowColor: Colors.shadowColor,
           shadowOpacity: 0.08,
           shadowRadius: 12,
           shadowOffset: { width: 0, height: -4 },
           elevation: 8,
         },
-        tabBarLabelStyle: { fontSize: 10, fontWeight: "700", letterSpacing: 0.3 },
+        tabBarShowLabel: true,
+        tabBarLabelStyle: { fontSize: 10.5, fontWeight: "600", letterSpacing: 0.3 },
       }}
     >
       <Tabs.Screen
@@ -73,11 +93,19 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="matches"
-        options={{ title: "Matches", tabBarIcon: ({ focused }) => <TabIcon emoji="💚" focused={focused} /> }}
+        options={{
+          title: "Matches",
+          tabBarBadge: matchCount,
+          tabBarIcon: ({ focused }) => <TabIcon emoji="💚" focused={focused} badge={matchCount} />,
+        }}
       />
       <Tabs.Screen
         name="notifications"
-        options={{ title: "Alerts", tabBarIcon: ({ focused }) => <TabIcon emoji="🔔" focused={focused} badge={unread} /> }}
+        options={{
+          title: "Alerts",
+          tabBarBadge: unread,
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🔔" focused={focused} badge={unread} />,
+        }}
       />
       <Tabs.Screen
         name="profile"
@@ -85,7 +113,7 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="settings"
-        options={{ title: "Settings", tabBarIcon: ({ focused }) => <TabIcon emoji="⚙️" focused={focused} /> }}
+        options={{ title: "Settings", tabBarIcon: ({ focused }) => <TabIcon emoji="⚙️" focused={focused} />, href: null }}
       />
     </Tabs>
   );

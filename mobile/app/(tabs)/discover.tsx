@@ -100,8 +100,10 @@ export default function DiscoverScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>🏠 HomeMatch</Text>
-        <Text style={styles.headerSub}>{agents.length} agents near you</Text>
+        <Text style={styles.headerTitle}>HomeMatch</Text>
+        <Text style={styles.headerSub}>
+          {agents.length === 0 ? "Swipe to explore agents" : `${agents.length} agents to review`}
+        </Text>
       </View>
 
       {/* Specialty filter chips */}
@@ -152,9 +154,9 @@ export default function DiscoverScreen() {
       <View style={styles.cardArea}>
         {agents.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyEmoji}>🎉</Text>
-            <Text style={styles.emptyTitle}>You've seen all agents!</Text>
-            <Text style={styles.emptySub}>Check back soon for new matches in your area.</Text>
+            <Text style={styles.emptyEmoji}>🔍</Text>
+            <Text style={styles.emptyTitle}>No more agents right now</Text>
+            <Text style={styles.emptySub}>You've reviewed all available agents.{"\n"}Check back soon — new agents join daily.</Text>
             <TouchableOpacity style={styles.refreshBtn} onPress={loadAgents}>
               <Text style={styles.refreshBtnText}>Refresh</Text>
             </TouchableOpacity>
@@ -204,7 +206,7 @@ const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12 },
   loadingText: { color: Colors.mutedForeground, fontSize: 15 },
   header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
-  headerTitle: { fontSize: 22, fontWeight: "800", color: Colors.foreground },
+  headerTitle: { fontSize: 26, fontWeight: "900", color: Colors.foreground },
   headerSub: { fontSize: 13, color: Colors.mutedForeground, marginTop: 2 },
   filterScroll: { flexGrow: 0 },
   filterRow: { paddingHorizontal: 16, paddingVertical: 6, gap: 8, flexDirection: "row" },
@@ -212,10 +214,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 20,
-    backgroundColor: Colors.muted,
+    backgroundColor: Colors.background,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
   },
   chipActive: {
     backgroundColor: Colors.primary,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
   },
   chipText: {
     fontSize: 13,
@@ -262,9 +268,9 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   actionBtn: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",

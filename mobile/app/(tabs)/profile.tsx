@@ -218,6 +218,20 @@ export default function ProfileScreen() {
             </View>
             <Text style={styles.toolChevron}>›</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.toolRow, { borderBottomWidth: 0 }]}
+            onPress={() => router.push("/settings" as any)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.toolIconWrap}>
+              <Text style={styles.toolIcon}>⚙️</Text>
+            </View>
+            <View style={styles.toolInfo}>
+              <Text style={styles.toolLabel}>Settings</Text>
+              <Text style={styles.toolSub}>Notifications, privacy & account</Text>
+            </View>
+            <Text style={styles.toolChevron}>›</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Agent Portal (only for agents) */}

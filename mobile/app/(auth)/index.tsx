@@ -17,6 +17,7 @@ export default function AuthScreen() {
   const [lastName, setLastName] = useState("");
   const [isAgent, setIsAgent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login, register } = useAuth();
   const router = useRouter();
 
@@ -129,21 +130,47 @@ export default function AuthScreen() {
 
             <View style={styles.inputWrap}>
               <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={styles.input}
-                placeholder={tab === "register" ? "Min 6 characters" : "••••••••"}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                placeholderTextColor={Colors.mutedForeground}
-              />
+              <View style={styles.passwordWrap}>
+                <TextInput
+                  style={[styles.input, styles.inputNoBorder]}
+                  placeholder={tab === "register" ? "Min 6 characters" : "••••••••"}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  placeholderTextColor={Colors.mutedForeground}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword((v) => !v)}
+                  style={styles.eyeBtn}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.eyeIcon}>{showPassword ? "🙈" : "👁"}</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
+            {tab === "login" && (
+              <TouchableOpacity
+                style={styles.forgotRow}
+                onPress={() => Alert.alert("Reset Password", "Please contact support to reset your password.")}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.forgotText}>Forgot password?</Text>
+              </TouchableOpacity>
+            )}
+
             {tab === "register" && (
-              <View style={styles.agentToggleRow}>
+              <View style={[styles.agentToggleRow, isAgent && styles.agentToggleRowActive]}>
                 <View style={styles.agentToggleInfo}>
-                  <Text style={styles.agentToggleLabel}>I'm a real estate agent</Text>
+                  <Text style={[styles.agentToggleLabel, isAgent && styles.agentToggleLabelActive]}>
+                    I'm a real estate agent
+                  </Text>
                   <Text style={styles.agentToggleHint}>Set up your agent profile after this step</Text>
+                  {isAgent && (
+                    <Text style={styles.agentToggleDesc}>
+                      You'll set up your agent profile in the next step
+                    </Text>
+                  )}
                 </View>
                 <Switch
                   value={isAgent}
@@ -261,6 +288,27 @@ const styles = StyleSheet.create({
     color: Colors.foreground,
     backgroundColor: Colors.background,
   },
+  passwordWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    backgroundColor: Colors.background,
+    paddingRight: 4,
+  },
+  inputNoBorder: {
+    flex: 1,
+    borderWidth: 0,
+    borderRadius: 0,
+  },
+  eyeBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  eyeIcon: { fontSize: 18 },
+  forgotRow: { alignItems: "flex-end" },
+  forgotText: { fontSize: 13, color: Colors.primary, fontWeight: "600" },
 
   submitBtn: {
     backgroundColor: Colors.primary,
@@ -285,14 +333,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.muted,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: Colors.primary + "33",
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+  },
+  agentToggleRowActive: {
+    backgroundColor: Colors.primaryLight,
+    borderColor: Colors.primary,
   },
   agentToggleInfo: { flex: 1, marginRight: 12 },
-  agentToggleLabel: { fontSize: 14, fontWeight: "700", color: Colors.primary },
+  agentToggleLabel: { fontSize: 14, fontWeight: "700", color: Colors.foreground },
+  agentToggleLabelActive: { color: Colors.primary },
   agentToggleHint: { fontSize: 12, color: Colors.mutedForeground, marginTop: 2 },
+  agentToggleDesc: {
+    fontSize: 12,
+    color: Colors.primary,
+    fontWeight: "600",
+    marginTop: 6,
+    lineHeight: 16,
+  },
 });
