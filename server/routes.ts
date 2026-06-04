@@ -188,6 +188,39 @@ export async function registerRoutes(
     }
   });
 
+  // ─── FAVORITES (saved-agent shortlist) ──────────────────────────────────────
+
+  app.get("/api/favorites", isAuthenticated, async (req: any, res) => {
+    try {
+      const agents = await storage.getFavoriteAgents(req.user.id);
+      res.json(agents);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch favorites" });
+    }
+  });
+
+  app.post("/api/favorites", isAuthenticated, async (req: any, res) => {
+    try {
+      const { agentId } = req.body;
+      if (!agentId) return res.status(400).json({ message: "agentId is required" });
+      const agent = await storage.getAgent(agentId);
+      if (!agent) return res.status(404).json({ message: "Agent not found" });
+      const fav = await storage.addFavorite(req.user.id, agentId);
+      res.json(fav);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/favorites/:agentId", isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.removeFavorite(req.user.id, req.params.agentId);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to remove favorite" });
+    }
+  });
+
   // ─── MATCHES ───────────────────────────────────────────────────────────────
 
   app.get("/api/matches", isAuthenticated, async (req: any, res) => {
@@ -414,7 +447,7 @@ export async function registerRoutes(
   app.put("/api/agent-portal/profile", isAuthenticated, isAgent, async (req: any, res) => {
     try {
       const agentId = req.agentProfile.id;
-      const allowed = ["name","bio","photo","phone","website","linkedinUrl","specialties","serviceAreas","languages","priceRangeMin","priceRangeMax","yearsExperience","personalityTags"];
+      const allowed = ["name","bio","photo","phone","website","linkedinUrl","licenseNumber","specialties","serviceAreas","languages","priceRangeMin","priceRangeMax","yearsExperience","personalityTags"];
       const updates: any = {};
       for (const f of allowed) if (req.body[f] !== undefined) updates[f] = req.body[f];
       const agent = await storage.updateAgent(agentId, updates);

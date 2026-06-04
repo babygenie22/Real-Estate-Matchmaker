@@ -135,6 +135,18 @@ export const insertReviewSchema = createInsertSchema(reviews)
 export type InsertReview = z.infer<typeof insertReviewSchema>;
 export type Review = typeof reviews.$inferSelect;
 
+// Favorites: a buyer's saved shortlist of agents (separate from swipe likes/matches)
+export const favorites = pgTable("favorites", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  agentId: varchar("agent_id").notNull().references(() => agents.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertFavoriteSchema = createInsertSchema(favorites).omit({ id: true, createdAt: true });
+export type InsertFavorite = z.infer<typeof insertFavoriteSchema>;
+export type Favorite = typeof favorites.$inferSelect;
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, passwordHash: true, createdAt: true, updatedAt: true });
 export const insertAgentSchema = createInsertSchema(agents).omit({ id: true, createdAt: true });
 export const insertLikeSchema = createInsertSchema(likes).omit({ id: true, createdAt: true });

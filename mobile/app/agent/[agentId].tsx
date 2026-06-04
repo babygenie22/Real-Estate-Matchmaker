@@ -8,6 +8,8 @@ import { api } from "@/lib/api";
 import { Colors } from "@/lib/constants";
 import { VerifiedBadge, isVerified } from "@/components/VerifiedBadge";
 import { Skeleton } from "@/components/Skeleton";
+import { useFavorites } from "@/lib/favorites";
+import { haptics } from "@/lib/haptics";
 
 interface Agent {
   id: string;
@@ -54,6 +56,8 @@ export default function AgentDetailScreen() {
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const saved = agent ? isFavorite(agent.id) : false;
 
   useEffect(() => { loadAgent(); loadReviews(); }, [agentId]);
 
@@ -105,6 +109,13 @@ export default function AgentDetailScreen() {
           <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
           <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()}>
             <Text style={styles.closeBtnText}>✕</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.saveBtn, saved && styles.saveBtnActive]}
+            onPress={() => { haptics.light(); toggleFavorite(agent as any); }}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.saveBtnText}>{saved ? "🔖" : "♡"}</Text>
           </TouchableOpacity>
           <View style={styles.heroInfo}>
             <View style={styles.heroNameRow}>
@@ -241,6 +252,9 @@ const styles = StyleSheet.create({
   photo: { width: "100%", height: "100%" },
   closeBtn: { position: "absolute", top: 16, right: 16, width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
   closeBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  saveBtn: { position: "absolute", top: 16, right: 60, width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
+  saveBtnActive: { backgroundColor: Colors.primary },
+  saveBtnText: { color: "#fff", fontSize: 18, fontWeight: "700" },
   heroInfo: { position: "absolute", bottom: 0, left: 0, right: 0, padding: 20, backgroundColor: "rgba(0,0,0,0.5)" },
   heroNameRow: { flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" },
   heroName: { fontSize: 24, fontWeight: "800", color: "#fff" },

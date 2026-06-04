@@ -206,6 +206,20 @@ export default function ProfileScreen() {
           <Text style={styles.sectionTitle}>Tools</Text>
           <TouchableOpacity
             style={styles.toolRow}
+            onPress={() => router.push("/saved")}
+            activeOpacity={0.7}
+          >
+            <View style={styles.toolIconWrap}>
+              <Text style={styles.toolIcon}>🔖</Text>
+            </View>
+            <View style={styles.toolInfo}>
+              <Text style={styles.toolLabel}>Saved Agents</Text>
+              <Text style={styles.toolSub}>Your shortlist & side-by-side compare</Text>
+            </View>
+            <Text style={styles.toolChevron}>›</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.toolRow}
             onPress={() => router.push("/mortgage-calculator")}
             activeOpacity={0.7}
           >

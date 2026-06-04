@@ -1,11 +1,11 @@
 import { db } from "./db";
 import { eq, and, desc, sql, asc, inArray } from "drizzle-orm";
 import {
-  users, agents, likes, matches, messages, bookings, notifications, reviews,
+  users, agents, likes, matches, messages, bookings, notifications, reviews, favorites,
   type User, type InsertUser, type Agent, type InsertAgent,
   type Like, type InsertLike, type Match, type InsertMatch,
   type Message, type InsertMessage, type Booking, type InsertBooking,
-  type Notification, type Review, type InsertReview,
+  type Notification, type Review, type InsertReview, type Favorite,
 } from "@shared/schema";
 // expo-server-sdk is loaded lazily to avoid blocking server startup
 let _expo: any = null;
@@ -85,6 +85,11 @@ export interface IStorage {
   createReview(review: InsertReview): Promise<Review>;
   getReviewsByAgent(agentId: string): Promise<(Review & { user: Pick<User, "firstName" | "lastName"> })[]>;
   getReviewByUserAndAgent(userId: string, agentId: string): Promise<Review | undefined>;
+
+  addFavorite(userId: string, agentId: string): Promise<Favorite>;
+  removeFavorite(userId: string, agentId: string): Promise<void>;
+  getFavoriteAgents(userId: string): Promise<Agent[]>;
+  getFavoriteAgentIds(userId: string): Promise<string[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -488,6 +493,38 @@ export class DatabaseStorage implements IStorage {
     const [review] = await db.select().from(reviews)
       .where(and(eq(reviews.userId, userId), eq(reviews.agentId, agentId)));
     return review;
+  }
+
+  async addFavorite(userId: string, agentId: string): Promise<Favorite> {
+    // Idempotent — return the existing favorite if already saved
+    const [existing] = await db.select().from(favorites)
+      .where(and(eq(favorites.userId, userId), eq(favorites.agentId, agentId)));
+    if (existing) return existing;
+    const [fav] = await db.insert(favorites).values({ userId, agentId }).returning();
+    return fav;
+  }
+
+  async removeFavorite(userId: string, agentId: string): Promise<void> {
+    await db.delete(favorites)
+      .where(and(eq(favorites.userId, userId), eq(favorites.agentId, agentId)));
+  }
+
+  async getFavoriteAgents(userId: string): Promise<Agent[]> {
+    const rows = await db.select().from(favorites)
+      .where(eq(favorites.userId, userId))
+      .orderBy(desc(favorites.createdAt));
+    if (rows.length === 0) return [];
+    const agentIds = rows.map(r => r.agentId);
+    const agentRows = await db.select().from(agents).where(inArray(agents.id, agentIds));
+    const agentMap = new Map(agentRows.map(a => [a.id, a]));
+    // Preserve favorite order (most-recently-saved first)
+    return rows.map(r => agentMap.get(r.agentId)).filter((a): a is Agent => Boolean(a));
+  }
+
+  async getFavoriteAgentIds(userId: string): Promise<string[]> {
+    const rows = await db.select({ agentId: favorites.agentId }).from(favorites)
+      .where(eq(favorites.userId, userId));
+    return rows.map(r => r.agentId);
   }
 }
 

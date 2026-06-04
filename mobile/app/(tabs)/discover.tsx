@@ -167,13 +167,18 @@ export default function DiscoverScreen() {
               : `${agents.length} agents to review`}
         </Text>
       </View>
-      {loading ? (
-        <ActivityIndicator size="small" color={Colors.primary} style={styles.refreshSlot} />
-      ) : (
-        <TouchableOpacity style={styles.refreshSlot} onPress={loadAgents} activeOpacity={0.7}>
-          <Text style={styles.refreshLink}>↻ Refresh</Text>
+      <View style={styles.headerActions}>
+        <TouchableOpacity style={styles.savedLink} onPress={() => router.push("/saved")} activeOpacity={0.7}>
+          <Text style={styles.savedLinkText}>🔖 Saved</Text>
         </TouchableOpacity>
-      )}
+        {loading ? (
+          <ActivityIndicator size="small" color={Colors.primary} style={styles.refreshSlot} />
+        ) : (
+          <TouchableOpacity style={styles.refreshSlot} onPress={loadAgents} activeOpacity={0.7}>
+            <Text style={styles.refreshLink}>↻ Refresh</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 
@@ -289,6 +294,9 @@ const styles = StyleSheet.create({
   headerLeft: { flex: 1 },
   headerTitle: { fontSize: 26, fontWeight: "900", color: Colors.foreground },
   headerSub: { fontSize: 13, color: Colors.mutedForeground, marginTop: 2 },
+  headerActions: { alignItems: "flex-end", gap: 8 },
+  savedLink: { paddingVertical: 2 },
+  savedLinkText: { fontSize: 14, fontWeight: "700", color: Colors.foregroundSecondary },
   refreshSlot: { minWidth: 72, alignItems: "flex-end", justifyContent: "center" },
   refreshLink: { color: Colors.primary, fontSize: 14, fontWeight: "600" },
   filterScroll: { flexGrow: 0 },
