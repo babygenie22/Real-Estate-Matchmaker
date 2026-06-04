@@ -1,11 +1,14 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   View, Text, FlatList, TouchableOpacity, Image, StyleSheet,
-  SafeAreaView, ActivityIndicator, Alert,
+  SafeAreaView, Alert, RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { api } from "@/lib/api";
 import { Colors } from "@/lib/constants";
+import { SkeletonRow } from "@/components/Skeleton";
+import { VerifiedBadge, isVerified } from "@/components/VerifiedBadge";
+import { haptics } from "@/lib/haptics";
 
 interface Agent {
   id: string;
@@ -16,6 +19,8 @@ interface Agent {
   reviewCount: number | null;
   yearsExperience: number | null;
   serviceAreas: string[] | null;
+  isApproved?: boolean;
+  licenseNumber?: string | null;
 }
 
 interface Match {
@@ -23,11 +28,13 @@ interface Match {
   agentId: string;
   createdAt: string;
   agent: Agent;
+  lastMessage?: { content?: string | null } | string | null;
 }
 
 export default function MatchesScreen() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
 
   const loadMatches = useCallback(async () => {
@@ -41,12 +48,25 @@ export default function MatchesScreen() {
     }
   }, []);
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadMatches();
+    setRefreshing(false);
+  }, [loadMatches]);
+
   useEffect(() => { loadMatches(); }, []);
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.centered}><ActivityIndicator size="large" color={Colors.primary} /></View>
+        <View style={styles.header}>
+          <Text style={styles.title}>Your Matches</Text>
+        </View>
+        <View style={styles.list}>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <SkeletonRow key={i} />
+          ))}
+        </View>
       </SafeAreaView>
     );
   }
@@ -70,6 +90,9 @@ export default function MatchesScreen() {
           keyExtractor={(m) => m.id}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+          }
           renderItem={({ item }) => <MatchCard match={item} />}
         />
       )}
@@ -86,7 +109,10 @@ function MatchCard({ match }: { match: Match }) {
     <TouchableOpacity style={styles.card} onPress={() => router.push(`/chat/${match.id}`)} activeOpacity={0.85}>
       <Image source={{ uri: avatarUri }} style={styles.avatar} />
       <View style={styles.info}>
-        <Text style={styles.name}>{agent.name}</Text>
+        <View style={styles.nameRow}>
+          <Text style={styles.name}>{agent.name}</Text>
+          {isVerified(agent) && <VerifiedBadge size="sm" />}
+        </View>
         <View style={styles.ratingRow}>
           <Text style={styles.star}>⭐</Text>
           <Text style={styles.ratingText}>{agent.rating?.toFixed(1)}</Text>
@@ -112,18 +138,26 @@ function MatchCard({ match }: { match: Match }) {
             ))}
           </View>
         )}
+        {(() => {
+          const preview = typeof match.lastMessage === "string" ? match.lastMessage : match.lastMessage?.content;
+          return preview ? (
+            <Text style={styles.lastMessage} numberOfLines={1}>
+              💬 {preview}
+            </Text>
+          ) : null;
+        })()}
       </View>
       <View style={styles.actions}>
         <TouchableOpacity
           style={styles.chatBtn}
-          onPress={() => router.push(`/chat/${match.id}`)}
+          onPress={() => { haptics.light(); router.push(`/chat/${match.id}`); }}
           activeOpacity={0.85}
         >
           <Text style={styles.chatBtnText}>💬 Chat</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.bookBtn}
-          onPress={() => router.push(`/booking/${agent.id}`)}
+          onPress={() => { haptics.light(); router.push(`/booking/${agent.id}`); }}
           activeOpacity={0.85}
         >
           <Text style={styles.bookBtnText}>📅 Book</Text>
@@ -161,7 +195,9 @@ const styles = StyleSheet.create({
   },
   avatar: { width: 70, height: 70, borderRadius: 35, borderWidth: 2, borderColor: Colors.primaryLight },
   info: { gap: 4 },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   name: { fontSize: 17, fontWeight: "800", color: Colors.foreground },
+  lastMessage: { fontSize: 13, color: Colors.mutedForeground, fontStyle: "italic", marginTop: 2 },
   ratingRow: { flexDirection: "row", alignItems: "center", gap: 3 },
   star: { fontSize: 12 },
   ratingText: { fontSize: 13, fontWeight: "700", color: Colors.foreground },

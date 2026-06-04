@@ -5,6 +5,8 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import SwipeCard from "@/components/SwipeCard";
+import { SkeletonCard } from "@/components/Skeleton";
+import { haptics } from "@/lib/haptics";
 import { api } from "@/lib/api";
 import { Colors } from "@/lib/constants";
 
@@ -49,6 +51,7 @@ export default function DiscoverScreen() {
   const [loading, setLoading] = useState(true);
   const [activeSpecialty, setActiveSpecialty] = useState("");
   const [activeArea, setActiveArea] = useState("");
+  const [lastSwiped, setLastSwiped] = useState<{ agent: Agent; index: number } | null>(null);
   const router = useRouter();
 
   useEffect(() => { loadAgents(); }, [activeSpecialty, activeArea]);
@@ -69,86 +72,136 @@ export default function DiscoverScreen() {
   }
 
   const handleLike = useCallback(async (agent: Agent) => {
+    haptics.medium();
+    setLastSwiped({ agent, index: agents.length });
     setAgents((prev) => prev.filter((a) => a.id !== agent.id));
     try {
       await api.post("/api/likes", { agentId: agent.id, liked: true });
     } catch {}
-  }, []);
+  }, [agents.length]);
 
   const handlePass = useCallback(async (agent: Agent) => {
+    haptics.light();
+    setLastSwiped({ agent, index: agents.length });
     setAgents((prev) => prev.filter((a) => a.id !== agent.id));
     try {
       await api.post("/api/likes", { agentId: agent.id, liked: false });
     } catch {}
-  }, []);
+  }, [agents.length]);
+
+  const undoSwipe = useCallback(() => {
+    if (!lastSwiped) return;
+    haptics.selection();
+    // Put the agent back on the END of the array so it becomes the top card
+    // again (topAgent === agents[agents.length - 1]). This is a LOCAL-only
+    // restore: the original like/pass was already recorded server-side and
+    // intentionally stays recorded — there is no backend undo endpoint.
+    setAgents((prev) => [...prev, lastSwiped.agent]);
+    setLastSwiped(null);
+  }, [lastSwiped]);
 
   const topAgent = agents[agents.length - 1];
   const nextAgent = agents[agents.length - 2];
 
+  const SpecialtyFilters = (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.filterRow}
+      style={styles.filterScroll}
+    >
+      {SPECIALTY_FILTERS.map((f) => {
+        const isActive = activeSpecialty === f.value;
+        return (
+          <TouchableOpacity
+            key={f.value || "all-specialty"}
+            style={[styles.chip, isActive && styles.chipActive]}
+            onPress={() => {
+              haptics.selection();
+              setActiveSpecialty(f.value);
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{f.label}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
+  );
+
+  const AreaFilters = (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.filterRow}
+      style={styles.filterScroll}
+    >
+      {AREA_FILTERS.map((f) => {
+        const isActive = activeArea === f.value;
+        return (
+          <TouchableOpacity
+            key={f.value || "all-area"}
+            style={[styles.chip, isActive && styles.chipActive]}
+            onPress={() => {
+              haptics.selection();
+              setActiveArea(f.value);
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{f.label}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
+  );
+
+  const Header = (
+    <View style={styles.header}>
+      <View style={styles.headerLeft}>
+        <Text style={styles.headerTitle}>HomeMatch</Text>
+        <Text style={styles.headerSub}>
+          {loading
+            ? "Finding your matches..."
+            : agents.length === 0
+              ? "Swipe to explore agents"
+              : `${agents.length} agents to review`}
+        </Text>
+      </View>
+      {loading ? (
+        <ActivityIndicator size="small" color={Colors.primary} style={styles.refreshSlot} />
+      ) : (
+        <TouchableOpacity style={styles.refreshSlot} onPress={loadAgents} activeOpacity={0.7}>
+          <Text style={styles.refreshLink}>↻ Refresh</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>Finding your matches...</Text>
+        {Header}
+        {SpecialtyFilters}
+        {AreaFilters}
+        <View style={styles.cardArea}>
+          <SkeletonCard width={CARD_W} height={CARD_H} />
         </View>
       </SafeAreaView>
     );
   }
 
+  const filtersActive = activeSpecialty !== "" || activeArea !== "";
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>HomeMatch</Text>
-        <Text style={styles.headerSub}>
-          {agents.length === 0 ? "Swipe to explore agents" : `${agents.length} agents to review`}
-        </Text>
-      </View>
+      {Header}
 
       {/* Specialty filter chips */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterRow}
-        style={styles.filterScroll}
-      >
-        {SPECIALTY_FILTERS.map((f) => {
-          const isActive = activeSpecialty === f.value;
-          return (
-            <TouchableOpacity
-              key={f.value || "all-specialty"}
-              style={[styles.chip, isActive && styles.chipActive]}
-              onPress={() => setActiveSpecialty(f.value)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{f.label}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+      {SpecialtyFilters}
 
       {/* Area filter chips */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterRow}
-        style={styles.filterScroll}
-      >
-        {AREA_FILTERS.map((f) => {
-          const isActive = activeArea === f.value;
-          return (
-            <TouchableOpacity
-              key={f.value || "all-area"}
-              style={[styles.chip, isActive && styles.chipActive]}
-              onPress={() => setActiveArea(f.value)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{f.label}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+      {AreaFilters}
 
       {/* Card stack */}
       <View style={styles.cardArea}>
@@ -160,6 +213,17 @@ export default function DiscoverScreen() {
             <TouchableOpacity style={styles.refreshBtn} onPress={loadAgents}>
               <Text style={styles.refreshBtnText}>Refresh</Text>
             </TouchableOpacity>
+            {filtersActive && (
+              <TouchableOpacity
+                style={styles.adjustBtn}
+                onPress={() => {
+                  setActiveSpecialty("");
+                  setActiveArea("");
+                }}
+              >
+                <Text style={styles.adjustBtnText}>Adjust filters</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
           <>
@@ -183,6 +247,15 @@ export default function DiscoverScreen() {
         )}
       </View>
 
+      {/* Undo last swipe */}
+      {lastSwiped && agents.length > 0 && (
+        <View style={styles.undoRow}>
+          <TouchableOpacity style={styles.undoPill} onPress={undoSwipe} activeOpacity={0.7}>
+            <Text style={styles.undoText}>↩ Undo</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Action buttons */}
       {agents.length > 0 && (
         <View style={styles.actions}>
@@ -205,9 +278,19 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   centered: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12 },
   loadingText: { color: Colors.mutedForeground, fontSize: 15 },
-  header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  headerLeft: { flex: 1 },
   headerTitle: { fontSize: 26, fontWeight: "900", color: Colors.foreground },
   headerSub: { fontSize: 13, color: Colors.mutedForeground, marginTop: 2 },
+  refreshSlot: { minWidth: 72, alignItems: "flex-end", justifyContent: "center" },
+  refreshLink: { color: Colors.primary, fontSize: 14, fontWeight: "600" },
   filterScroll: { flexGrow: 0 },
   filterRow: { paddingHorizontal: 16, paddingVertical: 6, gap: 8, flexDirection: "row" },
   chip: {
@@ -259,6 +342,26 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   refreshBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  adjustBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    marginTop: 2,
+  },
+  adjustBtnText: { color: Colors.foregroundSecondary, fontWeight: "600", fontSize: 14 },
+  undoRow: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 8,
+  },
+  undoPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.muted,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 18,
+  },
+  undoText: { color: Colors.foregroundSecondary, fontSize: 13, fontWeight: "600" },
   actions: {
     flexDirection: "row",
     justifyContent: "center",

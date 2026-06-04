@@ -1,10 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
-  SafeAreaView, ActivityIndicator, Alert,
+  SafeAreaView, Alert, RefreshControl,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { api } from "@/lib/api";
 import { Colors } from "@/lib/constants";
+import { SkeletonRow } from "@/components/Skeleton";
+import { haptics } from "@/lib/haptics";
 
 interface Notification {
   id: string;
@@ -13,6 +16,7 @@ interface Notification {
   body: string;
   read: boolean;
   createdAt: string;
+  referenceId?: string;
 }
 
 function typeEmoji(type: string) {
@@ -40,8 +44,10 @@ function timeAgo(iso: string) {
 }
 
 export default function NotificationsScreen() {
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -56,6 +62,33 @@ export default function NotificationsScreen() {
 
   useEffect(() => { load(); }, []);
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await load();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [load]);
+
+  function navigateFor(n: Notification) {
+    try {
+      if (n.type === "match") {
+        router.push("/(tabs)/matches");
+      } else if (n.type === "message") {
+        if (n.referenceId) {
+          router.push(`/chat/${n.referenceId}`);
+        } else {
+          router.push("/(tabs)/matches");
+        }
+      } else if (n.type === "booking" || n.type === "booking_update") {
+        router.push("/(tabs)/profile");
+      }
+    } catch {
+      // bad referenceId or route — never crash on navigation
+    }
+  }
+
   async function markRead(id: string) {
     try {
       await api.put(`/api/notifications/${id}/read`, {});
@@ -63,7 +96,14 @@ export default function NotificationsScreen() {
     } catch {}
   }
 
+  function onNotificationPress(n: Notification) {
+    haptics.selection();
+    if (!n.read) markRead(n.id);
+    navigateFor(n);
+  }
+
   async function markAllRead() {
+    haptics.light();
     try {
       await api.put("/api/notifications/read-all", {});
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
@@ -75,7 +115,17 @@ export default function NotificationsScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.centered}><ActivityIndicator size="large" color={Colors.primary} /></View>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>Notifications</Text>
+            <Text style={styles.subtitle}>Loading…</Text>
+          </View>
+        </View>
+        <View style={styles.skeletonList}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <SkeletonRow key={i} />
+          ))}
+        </View>
       </SafeAreaView>
     );
   }
@@ -105,10 +155,13 @@ export default function NotificationsScreen() {
           data={notifications}
           keyExtractor={(n) => n.id}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+          }
           renderItem={({ item }) => (
             <TouchableOpacity
               style={[styles.item, !item.read && styles.itemUnread]}
-              onPress={() => !item.read && markRead(item.id)}
+              onPress={() => onNotificationPress(item)}
               activeOpacity={0.7}
             >
               <View style={[styles.iconCircle, { backgroundColor: typeBg(item.type) }]}>
@@ -136,6 +189,7 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
+  skeletonList: { paddingHorizontal: 4, paddingTop: 8 },
   header: {
     flexDirection: "row",
     alignItems: "center",

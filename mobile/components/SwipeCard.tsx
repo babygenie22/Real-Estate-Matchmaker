@@ -4,6 +4,8 @@ import {
   PanResponder, Animated,
 } from "react-native";
 import { Colors } from "@/lib/constants";
+import { VerifiedBadge, isVerified } from "@/components/VerifiedBadge";
+import { haptics } from "@/lib/haptics";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 export const CARD_W = SCREEN_W - 32;
@@ -23,6 +25,8 @@ interface Agent {
   avgDaysOnMarket?: number | null;
   saleToListRatio?: number | null;
   yearsExperience: number | null;
+  isApproved?: boolean;
+  licenseNumber?: string | null;
 }
 
 interface SwipeCardProps {
@@ -87,12 +91,14 @@ export default function SwipeCard({ agent, onLike, onPass, onPress, isTop }: Swi
         }
 
         if (gs.dx > SWIPE_THRESHOLD) {
+          haptics.success();
           Animated.spring(position, {
             toValue: { x: SCREEN_W * 1.5, y: gs.dy },
             useNativeDriver: false,
             damping: 14,
           }).start(() => onLike());
         } else if (gs.dx < -SWIPE_THRESHOLD) {
+          haptics.light();
           Animated.spring(position, {
             toValue: { x: -SCREEN_W * 1.5, y: gs.dy },
             useNativeDriver: false,
@@ -148,6 +154,7 @@ export default function SwipeCard({ agent, onLike, onPass, onPress, isTop }: Swi
       <View style={styles.infoOverlay}>
         <View style={styles.nameRow}>
           <Text style={styles.name} numberOfLines={1}>{agent.name}</Text>
+          {isVerified(agent) && <VerifiedBadge size="sm" />}
           {agent.yearsExperience != null && (
             <View style={styles.expBadge}>
               <Text style={styles.expText}>{agent.yearsExperience}yr</Text>
