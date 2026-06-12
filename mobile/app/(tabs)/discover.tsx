@@ -102,6 +102,7 @@ export default function DiscoverScreen() {
 
   const topAgent = agents[agents.length - 1];
   const nextAgent = agents[agents.length - 2];
+  const filtersActive = activeSpecialty !== "" || activeArea !== "";
 
   const SpecialtyFilters = (
     <ScrollView
@@ -163,8 +164,10 @@ export default function DiscoverScreen() {
           {loading
             ? "Finding your matches..."
             : agents.length === 0
-              ? "Swipe to explore agents"
-              : `${agents.length} agents to review`}
+              ? filtersActive
+                ? "No agents match these filters"
+                : "You're all caught up"
+              : `${agents.length} ${agents.length === 1 ? "agent" : "agents"} to review`}
         </Text>
       </View>
       <View style={styles.headerActions}>
@@ -175,7 +178,7 @@ export default function DiscoverScreen() {
           <ActivityIndicator size="small" color={Colors.primary} style={styles.refreshSlot} />
         ) : (
           <TouchableOpacity style={styles.refreshSlot} onPress={loadAgents} activeOpacity={0.7}>
-            <Text style={styles.refreshLink}>↻ Refresh</Text>
+            <Text style={styles.refreshLink}>🔄 Refresh</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -195,8 +198,6 @@ export default function DiscoverScreen() {
     );
   }
 
-  const filtersActive = activeSpecialty !== "" || activeArea !== "";
-
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -212,21 +213,34 @@ export default function DiscoverScreen() {
       <View style={styles.cardArea}>
         {agents.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyEmoji}>🔍</Text>
-            <Text style={styles.emptyTitle}>No more agents right now</Text>
-            <Text style={styles.emptySub}>You've reviewed all available agents.{"\n"}Check back soon — new agents join daily.</Text>
-            <TouchableOpacity style={styles.refreshBtn} onPress={loadAgents}>
-              <Text style={styles.refreshBtnText}>Refresh</Text>
-            </TouchableOpacity>
-            {filtersActive && (
+            <Text style={styles.emptyEmoji}>{filtersActive ? "🎚️" : "✨"}</Text>
+            <Text style={styles.emptyTitle}>
+              {filtersActive ? "No agents match these filters" : "You're all caught up"}
+            </Text>
+            <Text style={styles.emptySub}>
+              {filtersActive
+                ? "Try removing a filter to see more agents in your area."
+                : "You've reviewed every available agent.\nWe'll notify you when new agents join."}
+            </Text>
+            {filtersActive ? (
               <TouchableOpacity
-                style={styles.adjustBtn}
+                style={styles.refreshBtn}
                 onPress={() => {
+                  haptics.selection();
                   setActiveSpecialty("");
                   setActiveArea("");
                 }}
               >
-                <Text style={styles.adjustBtnText}>Adjust filters</Text>
+                <Text style={styles.refreshBtnText}>Clear filters</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.refreshBtn} onPress={loadAgents}>
+                <Text style={styles.refreshBtnText}>Refresh</Text>
+              </TouchableOpacity>
+            )}
+            {lastSwiped && (
+              <TouchableOpacity style={styles.adjustBtn} onPress={undoSwipe}>
+                <Text style={styles.adjustBtnText}>↩ Undo last swipe</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -254,6 +268,7 @@ export default function DiscoverScreen() {
 
       {/* Undo last swipe */}
       {lastSwiped && agents.length > 0 && (
+        // (Empty-deck undo lives inside the empty state above.)
         <View style={styles.undoRow}>
           <TouchableOpacity style={styles.undoPill} onPress={undoSwipe} activeOpacity={0.7}>
             <Text style={styles.undoText}>↩ Undo</Text>
@@ -376,12 +391,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingBottom: 24,
     paddingTop: 16,
-    gap: 20,
+    gap: 24,
   },
   actionBtn: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
@@ -392,6 +407,6 @@ const styles = StyleSheet.create({
   },
   passBtn: { backgroundColor: "#fff", borderWidth: 2, borderColor: Colors.destructive },
   likeBtn: { backgroundColor: "#fff", borderWidth: 2, borderColor: Colors.success },
-  infoBtn: { width: 48, height: 48, borderRadius: 24, backgroundColor: Colors.muted, justifyContent: "center", alignItems: "center" },
-  actionEmoji: { fontSize: 24 },
+  infoBtn: { width: 56, height: 56, borderRadius: 28, backgroundColor: Colors.muted, justifyContent: "center", alignItems: "center" },
+  actionEmoji: { fontSize: 26 },
 });

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-  View, Text, StyleSheet, SafeAreaView, ScrollView, Alert, Switch,
+  View, Text, StyleSheet, SafeAreaView, ScrollView, Alert, Switch, Linking,
 } from "react-native";
 import { useRouter } from "expo-router";
 import Constants from "expo-constants";
@@ -70,11 +70,33 @@ export default function SettingsScreen() {
     ]);
   }
 
+  async function openEmail(subject: string, body?: string) {
+    const params = new URLSearchParams({ subject, ...(body ? { body } : {}) });
+    const url = `mailto:support@homematch.app?${params.toString()}`;
+    try {
+      const ok = await Linking.canOpenURL(url);
+      if (ok) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert("Contact us", "Email support@homematch.app and we'll be happy to help.");
+      }
+    } catch {
+      Alert.alert("Contact us", "Email support@homematch.app and we'll be happy to help.");
+    }
+  }
+
   function handleDeleteAccount() {
     Alert.alert(
       "Delete Account",
-      "This is permanent. Contact support@homematch.app to delete your account.",
-      [{ text: "OK" }]
+      "This is permanent and cannot be undone. We'll process your request within 48 hours.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Request deletion",
+          style: "destructive",
+          onPress: () => openEmail("Delete my account", "Please delete my HomeMatch account."),
+        },
+      ]
     );
   }
 
@@ -83,11 +105,11 @@ export default function SettingsScreen() {
   }
 
   function handleContactSupport() {
-    Alert.alert("Support", "Email us at support@homematch.app", [{ text: "OK" }]);
+    openEmail("HomeMatch support request");
   }
 
   function handleReportBug() {
-    Alert.alert("Support", "Email us at support@homematch.app", [{ text: "OK" }]);
+    openEmail("Bug report", "Describe what happened and the steps to reproduce it:\n\n");
   }
 
   const appVersion = Constants.expoConfig?.version ?? "1.0.0";

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert, Switch,
@@ -9,6 +9,8 @@ import { Colors } from "@/lib/constants";
 
 type Tab = "login" | "register";
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function AuthScreen() {
   const [tab, setTab] = useState<Tab>("login");
   const [email, setEmail] = useState("");
@@ -18,25 +20,32 @@ export default function AuthScreen() {
   const [isAgent, setIsAgent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const { login, register } = useAuth();
   const router = useRouter();
 
+  const passwordRef = useRef<TextInput>(null);
+  const emailRef = useRef<TextInput>(null);
+  const lastNameRef = useRef<TextInput>(null);
+
+  function validate() {
+    const next: { email?: string; password?: string } = {};
+    if (!email.trim()) next.email = "Email is required";
+    else if (!EMAIL_RE.test(email.trim())) next.email = "Enter a valid email address";
+    if (!password) next.password = "Password is required";
+    else if (tab === "register" && password.length < 6) next.password = "Use at least 6 characters";
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  }
+
   async function handleSubmit() {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert("Missing fields", "Please enter your email and password.");
-      return;
-    }
+    if (!validate()) return;
     setLoading(true);
     try {
       if (tab === "login") {
         await login(email.trim(), password);
         router.replace("/");
       } else {
-        if (password.length < 6) {
-          Alert.alert("Weak password", "Password must be at least 6 characters.");
-          setLoading(false);
-          return;
-        }
         if (isAgent) {
           // Navigate to agent onboarding flow, passing credentials as params
           router.push({
@@ -77,7 +86,7 @@ export default function AuthScreen() {
               <TouchableOpacity
                 key={t}
                 style={[styles.tabBtn, tab === t && styles.tabBtnActive]}
-                onPress={() => setTab(t)}
+                onPress={() => { setTab(t); setErrors({}); }}
                 activeOpacity={0.8}
               >
                 <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
@@ -92,22 +101,31 @@ export default function AuthScreen() {
             {tab === "register" && (
               <View style={styles.row}>
                 <View style={[styles.inputWrap, { flex: 1, marginRight: 6 }]}>
+                  <Text style={styles.label}>First name</Text>
                   <TextInput
                     style={styles.input}
                     placeholder="First name"
                     value={firstName}
                     onChangeText={setFirstName}
                     autoCapitalize="words"
+                    returnKeyType="next"
+                    blurOnSubmit={false}
+                    onSubmitEditing={() => lastNameRef.current?.focus()}
                     placeholderTextColor={Colors.mutedForeground}
                   />
                 </View>
                 <View style={[styles.inputWrap, { flex: 1, marginLeft: 6 }]}>
+                  <Text style={styles.label}>Last name</Text>
                   <TextInput
+                    ref={lastNameRef}
                     style={styles.input}
                     placeholder="Last name"
                     value={lastName}
                     onChangeText={setLastName}
                     autoCapitalize="words"
+                    returnKeyType="next"
+                    blurOnSubmit={false}
+                    onSubmitEditing={() => emailRef.current?.focus()}
                     placeholderTextColor={Colors.mutedForeground}
                   />
                 </View>
@@ -117,36 +135,46 @@ export default function AuthScreen() {
             <View style={styles.inputWrap}>
               <Text style={styles.label}>Email</Text>
               <TextInput
-                style={styles.input}
+                ref={emailRef}
+                style={[styles.input, errors.email && styles.inputError]}
                 placeholder="you@example.com"
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(t) => { setEmail(t); if (errors.email) setErrors((e) => ({ ...e, email: undefined })); }}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
+                returnKeyType="next"
+                blurOnSubmit={false}
+                onSubmitEditing={() => passwordRef.current?.focus()}
                 placeholderTextColor={Colors.mutedForeground}
               />
+              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
             </View>
 
             <View style={styles.inputWrap}>
               <Text style={styles.label}>Password</Text>
-              <View style={styles.passwordWrap}>
+              <View style={[styles.passwordWrap, errors.password && styles.inputError]}>
                 <TextInput
+                  ref={passwordRef}
                   style={[styles.input, styles.inputNoBorder]}
                   placeholder={tab === "register" ? "Min 6 characters" : "••••••••"}
                   value={password}
-                  onChangeText={setPassword}
+                  onChangeText={(t) => { setPassword(t); if (errors.password) setErrors((e) => ({ ...e, password: undefined })); }}
                   secureTextEntry={!showPassword}
+                  returnKeyType={tab === "login" ? "go" : "next"}
+                  onSubmitEditing={handleSubmit}
                   placeholderTextColor={Colors.mutedForeground}
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword((v) => !v)}
                   style={styles.eyeBtn}
                   activeOpacity={0.7}
+                  accessibilityLabel={showPassword ? "Hide password" : "Show password"}
                 >
                   <Text style={styles.eyeIcon}>{showPassword ? "🙈" : "👁"}</Text>
                 </TouchableOpacity>
               </View>
+              {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
             </View>
 
             {tab === "login" && (
@@ -165,12 +193,9 @@ export default function AuthScreen() {
                   <Text style={[styles.agentToggleLabel, isAgent && styles.agentToggleLabelActive]}>
                     I'm a real estate agent
                   </Text>
-                  <Text style={styles.agentToggleHint}>Set up your agent profile after this step</Text>
-                  {isAgent && (
-                    <Text style={styles.agentToggleDesc}>
-                      You'll set up your agent profile in the next step
-                    </Text>
-                  )}
+                  <Text style={styles.agentToggleHint}>
+                    {isAgent ? "You'll set up your agent profile in the next step" : "Verified agents get a profile, reviews, and bookings"}
+                  </Text>
                 </View>
                 <Switch
                   value={isAgent}
@@ -302,11 +327,16 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     borderRadius: 0,
   },
+  inputError: { borderColor: Colors.destructive },
+  errorText: { fontSize: 12, color: Colors.destructive, fontWeight: "600", marginTop: 4 },
   eyeBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    minWidth: 44,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  eyeIcon: { fontSize: 18 },
+  eyeIcon: { fontSize: 20 },
   forgotRow: { alignItems: "flex-end" },
   forgotText: { fontSize: 13, color: Colors.primary, fontWeight: "600" },
 

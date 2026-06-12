@@ -7,7 +7,7 @@ import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { io, Socket } from "socket.io-client";
 import { useAuth } from "@/lib/auth";
 import { api, getToken } from "@/lib/api";
-import { API_URL, Colors } from "@/lib/constants";
+import { API_URL, Colors, HIT_SLOP } from "@/lib/constants";
 
 interface Message {
   id: string;
@@ -15,6 +15,7 @@ interface Message {
   senderType: string;
   content: string;
   createdAt: string;
+  status?: "sending" | "failed";
 }
 
 interface Match {
@@ -71,21 +72,52 @@ export default function ChatScreen() {
     socket.on("new-message", (msg: Message) => {
       setMessages((prev) => {
         if (prev.find((m) => m.id === msg.id)) return prev;
-        return [...prev, msg];
+        // Reconcile: if this is our own message echoed back, drop the optimistic copy.
+        const withoutOptimistic = prev.filter(
+          (m) => !(m.status === "sending" && m.senderId === msg.senderId && m.content === msg.content)
+        );
+        return [...withoutOptimistic, msg];
       });
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     });
   }
 
-  async function sendMessage() {
+  async function deliver(content: string, tempId: string) {
+    try {
+      const saved = await api.post<Message>("/api/messages", { matchId, content });
+      // Replace the optimistic bubble with the server copy (socket may also do this).
+      setMessages((prev) => {
+        if (saved?.id && prev.find((m) => m.id === saved.id)) {
+          return prev.filter((m) => m.id !== tempId);
+        }
+        return prev.map((m) => (m.id === tempId ? { ...saved, status: undefined } : m));
+      });
+    } catch {
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...m, status: "failed" } : m)));
+    }
+  }
+
+  function sendMessage() {
     const content = input.trim();
     if (!content) return;
     setInput("");
-    try {
-      await api.post("/api/messages", { matchId, content });
-    } catch (err: any) {
-      Alert.alert("Error", err.message);
-    }
+    const tempId = `temp-${Date.now()}`;
+    const optimistic: Message = {
+      id: tempId,
+      senderId: user?.id ?? "me",
+      senderType: "buyer",
+      content,
+      createdAt: new Date().toISOString(),
+      status: "sending",
+    };
+    setMessages((prev) => [...prev, optimistic]);
+    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
+    deliver(content, tempId);
+  }
+
+  function retryMessage(msg: Message) {
+    setMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, status: "sending" } : m)));
+    deliver(msg.content, msg.id);
   }
 
   function formatTime(iso: string) {
@@ -148,14 +180,28 @@ export default function ChatScreen() {
           }
           renderItem={({ item }) => {
             const isMe = item.senderId === user?.id;
+            const failed = item.status === "failed";
+            const sending = item.status === "sending";
             return (
-              <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleThem]}>
-                <Text style={[styles.bubbleText, isMe ? styles.bubbleTextMe : styles.bubbleTextThem]}>
-                  {item.content}
-                </Text>
-                <Text style={[styles.bubbleTime, isMe ? styles.bubbleTimeMe : styles.bubbleTimeThem]}>
-                  {formatTime(item.createdAt)}
-                </Text>
+              <View>
+                <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleThem, failed && styles.bubbleFailed]}>
+                  <Text style={[styles.bubbleText, isMe ? styles.bubbleTextMe : styles.bubbleTextThem]}>
+                    {item.content}
+                  </Text>
+                  <View style={styles.bubbleMeta}>
+                    <Text style={[styles.bubbleTime, isMe ? styles.bubbleTimeMe : styles.bubbleTimeThem]}>
+                      {sending ? "Sending…" : formatTime(item.createdAt)}
+                    </Text>
+                    {!sending && !failed && isMe && (
+                      <Text style={styles.bubbleCheck}>✓</Text>
+                    )}
+                  </View>
+                </View>
+                {failed && (
+                  <TouchableOpacity onPress={() => retryMessage(item)} hitSlop={HIT_SLOP} style={styles.retryRow}>
+                    <Text style={styles.retryText}>Failed to send · Tap to retry</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             );
           }}
@@ -190,11 +236,11 @@ const styles = StyleSheet.create({
   agentBarInfo: { flex: 1 },
   agentName: { fontSize: 16, fontWeight: "700", color: Colors.foreground },
   agentSub: { fontSize: 12, color: Colors.mutedForeground },
-  agentBarActions: { flexDirection: "row", gap: 6 },
+  agentBarActions: { flexDirection: "row", gap: 8 },
   agentBarBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: Colors.border,
     backgroundColor: Colors.background,
@@ -211,12 +257,17 @@ const styles = StyleSheet.create({
   bubble: { maxWidth: "78%", borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 4 },
   bubbleMe: { alignSelf: "flex-end", backgroundColor: Colors.primary, borderBottomRightRadius: 4 },
   bubbleThem: { alignSelf: "flex-start", backgroundColor: Colors.muted, borderBottomLeftRadius: 4 },
+  bubbleFailed: { backgroundColor: Colors.destructive },
   bubbleText: { fontSize: 15, lineHeight: 21 },
   bubbleTextMe: { color: "#fff" },
   bubbleTextThem: { color: Colors.foreground },
-  bubbleTime: { fontSize: 10, marginTop: 4, alignSelf: "flex-end" },
+  bubbleMeta: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 4, marginTop: 4 },
+  bubbleTime: { fontSize: 10 },
   bubbleTimeMe: { color: "rgba(255,255,255,0.6)" },
   bubbleTimeThem: { color: Colors.mutedForeground },
+  bubbleCheck: { fontSize: 10, color: "rgba(255,255,255,0.7)" },
+  retryRow: { alignSelf: "flex-end", paddingVertical: 4, paddingHorizontal: 2 },
+  retryText: { fontSize: 11, color: Colors.destructive, fontWeight: "600" },
   inputBar: { flexDirection: "row", alignItems: "flex-end", padding: 12, gap: 10, borderTopWidth: 1, borderTopColor: Colors.border, backgroundColor: Colors.background },
   textInput: { flex: 1, borderWidth: 1, borderColor: Colors.border, borderRadius: 22, paddingHorizontal: 16, paddingVertical: 10, fontSize: 15, color: Colors.foreground, maxHeight: 100, backgroundColor: Colors.card },
   sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.primary, justifyContent: "center", alignItems: "center" },

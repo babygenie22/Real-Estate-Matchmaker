@@ -107,6 +107,13 @@ export default function AgentDetailScreen() {
         {/* Hero photo */}
         <View style={styles.hero}>
           <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
+          {/* Gradient scrim (stacked translucent bands → guarantees legible text on any photo) */}
+          <View pointerEvents="none" style={styles.scrim}>
+            <View style={[styles.scrimBand, { backgroundColor: "rgba(0,0,0,0.0)" }]} />
+            <View style={[styles.scrimBand, { backgroundColor: "rgba(0,0,0,0.18)" }]} />
+            <View style={[styles.scrimBand, { backgroundColor: "rgba(0,0,0,0.42)" }]} />
+            <View style={[styles.scrimBand, { backgroundColor: "rgba(0,0,0,0.68)" }]} />
+          </View>
           <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()}>
             <Text style={styles.closeBtnText}>✕</Text>
           </TouchableOpacity>
@@ -250,15 +257,17 @@ const styles = StyleSheet.create({
   skeletonStatsRow: { flexDirection: "row", gap: 8, marginTop: 16, marginBottom: 4 },
   hero: { position: "relative", height: 340 },
   photo: { width: "100%", height: "100%" },
+  scrim: { position: "absolute", left: 0, right: 0, bottom: 0, height: 200, flexDirection: "column" },
+  scrimBand: { flex: 1 },
   closeBtn: { position: "absolute", top: 16, right: 16, width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
   closeBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
   saveBtn: { position: "absolute", top: 16, right: 60, width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
   saveBtnActive: { backgroundColor: Colors.primary },
   saveBtnText: { color: "#fff", fontSize: 18, fontWeight: "700" },
-  heroInfo: { position: "absolute", bottom: 0, left: 0, right: 0, padding: 20, backgroundColor: "rgba(0,0,0,0.5)" },
+  heroInfo: { position: "absolute", bottom: 0, left: 0, right: 0, padding: 20 },
   heroNameRow: { flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" },
-  heroName: { fontSize: 24, fontWeight: "800", color: "#fff" },
-  heroRating: { fontSize: 14, color: "rgba(255,255,255,0.85)", marginTop: 4 },
+  heroName: { fontSize: 24, fontWeight: "800", color: "#fff", textShadowColor: "rgba(0,0,0,0.55)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
+  heroRating: { fontSize: 14, color: "rgba(255,255,255,0.92)", marginTop: 4, textShadowColor: "rgba(0,0,0,0.55)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
   body: { padding: 20 },
   statsRow: { flexDirection: "row", borderRadius: 14, backgroundColor: Colors.muted, padding: 16, marginBottom: 20, gap: 4 },
   statBox: { flex: 1, alignItems: "center" },
