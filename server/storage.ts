@@ -18,14 +18,21 @@ async function getExpo() {
   return _expo;
 }
 
-export async function sendPushNotification(userId: string, title: string, body: string) {
+export async function sendPushNotification(
+  userId: string,
+  title: string,
+  body: string,
+  data?: { type?: string; referenceId?: string },
+) {
   try {
     const [user] = await db.select().from(users).where(eq(users.id, userId));
     if (!user?.expoPushToken) return;
     const expo = await getExpo();
     const { default: Expo } = await import("expo-server-sdk");
     if (!Expo.isExpoPushToken(user.expoPushToken)) return;
-    await expo.sendPushNotificationsAsync([{ to: user.expoPushToken, title, body, sound: "default" }]);
+    await expo.sendPushNotificationsAsync([
+      { to: user.expoPushToken, title, body, sound: "default", ...(data ? { data } : {}) },
+    ]);
   } catch (err) {
     console.error("Push notification error:", err);
   }
@@ -229,7 +236,7 @@ export class DatabaseStorage implements IStorage {
       const agent = await this.getAgent(like.agentId);
       const user = await this.getUser(like.userId);
       const msg = `You matched with ${agent?.name || "an agent"}. Start chatting!`;
-      sendPushNotification(like.userId, "New Match! 🎉", msg);
+      sendPushNotification(like.userId, "New Match! 🎉", msg, { type: "match", referenceId: match.id });
       await this.createNotification({ userId: like.userId, type: "match", title: "New Match! 🎉", body: msg, referenceId: match.id });
 
       // Email notification for client
@@ -251,7 +258,7 @@ export class DatabaseStorage implements IStorage {
             body: `${clientName} liked your profile and wants to connect.`,
             referenceId: match.id,
           });
-          sendPushNotification(agentUser.id, "New Client Match! 🎉", `${clientName} liked your profile.`);
+          sendPushNotification(agentUser.id, "New Client Match! 🎉", `${clientName} liked your profile.`, { type: "match", referenceId: match.id });
         }
       }
     }
@@ -371,7 +378,7 @@ export class DatabaseStorage implements IStorage {
     const agent = await this.getAgent(booking.agentId);
     const user = await this.getUser(booking.userId);
     const msg = `Your consultation request with ${agent?.name || "an agent"} on ${booking.proposedDate} at ${booking.proposedTime} has been received.`;
-    sendPushNotification(booking.userId, "Booking Requested 📅", msg);
+    sendPushNotification(booking.userId, "Booking Requested 📅", msg, { type: "booking", referenceId: created.id });
     await this.createNotification({ userId: booking.userId, type: "booking", title: "Booking Requested 📅", body: msg, referenceId: created.id });
 
     // Notify the agent
@@ -379,7 +386,7 @@ export class DatabaseStorage implements IStorage {
       const clientName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "A client";
       const agentMsg = `${clientName} requested a consultation on ${booking.proposedDate} at ${booking.proposedTime}.`;
       await this.createNotification({ userId: agent.userId, type: "booking", title: "New Booking Request 📅", body: agentMsg, referenceId: created.id });
-      sendPushNotification(agent.userId, "New Booking Request 📅", agentMsg);
+      sendPushNotification(agent.userId, "New Booking Request 📅", agentMsg, { type: "booking", referenceId: created.id });
     }
 
     return created;
@@ -425,7 +432,7 @@ export class DatabaseStorage implements IStorage {
       const timeStr = confirmedTime || updated.proposedTime;
       const body = `Your consultation with ${agent?.name} on ${dateStr} at ${timeStr} is confirmed!`;
       await this.createNotification({ userId: updated.userId, type: "booking_update", title: "Booking Confirmed ✅", body, referenceId: id });
-      sendPushNotification(updated.userId, "Booking Confirmed ✅", body);
+      sendPushNotification(updated.userId, "Booking Confirmed ✅", body, { type: "booking_update", referenceId: id });
       if (user?.email && agent) {
         import("./integrations/resend").then(({ sendBookingConfirmedEmail }) =>
           sendBookingConfirmedEmail(user.email!, user.firstName || "", agent.name, dateStr, timeStr, agentNotes).catch(() => {})
@@ -434,7 +441,7 @@ export class DatabaseStorage implements IStorage {
     } else if (status === "declined") {
       const body = `${agent?.name} is unavailable at the requested time. Please propose a new time.`;
       await this.createNotification({ userId: updated.userId, type: "booking_update", title: "Booking Declined", body, referenceId: id });
-      sendPushNotification(updated.userId, "Booking Update", body);
+      sendPushNotification(updated.userId, "Booking Update", body, { type: "booking_update", referenceId: id });
       if (user?.email && agent) {
         import("./integrations/resend").then(({ sendBookingDeclinedEmail }) =>
           sendBookingDeclinedEmail(user.email!, user.firstName || "", agent.name, agentNotes).catch(() => {})

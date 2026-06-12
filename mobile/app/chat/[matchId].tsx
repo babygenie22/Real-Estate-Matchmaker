@@ -3,7 +3,7 @@ import {
   View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, SafeAreaView, ActivityIndicator, Alert, Image,
 } from "react-native";
-import { useLocalSearchParams, useNavigation } from "expo-router";
+import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { io, Socket } from "socket.io-client";
 import { useAuth } from "@/lib/auth";
 import { api, getToken } from "@/lib/api";
@@ -26,6 +26,7 @@ export default function ChatScreen() {
   const { matchId } = useLocalSearchParams<{ matchId: string }>();
   const { user } = useAuth();
   const navigation = useNavigation();
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [match, setMatch] = useState<Match | null>(null);
@@ -109,9 +110,25 @@ export default function ChatScreen() {
             source={{ uri: match.agent.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(match.agent.name)}&size=80&background=dbeafe&color=2563eb` }}
             style={styles.agentAvatar}
           />
-          <View>
+          <View style={styles.agentBarInfo}>
             <Text style={styles.agentName}>{match.agent.name}</Text>
             <Text style={styles.agentSub}>Real Estate Agent</Text>
+          </View>
+          <View style={styles.agentBarActions}>
+            <TouchableOpacity
+              style={styles.agentBarBtn}
+              onPress={() => router.push(`/agent/${match.agent.id}` as any)}
+              activeOpacity={0.75}
+            >
+              <Text style={styles.agentBarBtnText}>👤 Profile</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.agentBarBtn, styles.agentBarBtnPrimary]}
+              onPress={() => router.push(`/booking/${match.agent.id}` as any)}
+              activeOpacity={0.75}
+            >
+              <Text style={[styles.agentBarBtnText, styles.agentBarBtnTextPrimary]}>📅 Book</Text>
+            </TouchableOpacity>
           </View>
         </View>
       )}
@@ -136,7 +153,9 @@ export default function ChatScreen() {
                 <Text style={[styles.bubbleText, isMe ? styles.bubbleTextMe : styles.bubbleTextThem]}>
                   {item.content}
                 </Text>
-                <Text style={styles.bubbleTime}>{formatTime(item.createdAt)}</Text>
+                <Text style={[styles.bubbleTime, isMe ? styles.bubbleTimeMe : styles.bubbleTimeThem]}>
+                  {formatTime(item.createdAt)}
+                </Text>
               </View>
             );
           }}
@@ -166,10 +185,26 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   flex: { flex: 1 },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
-  agentBar: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderBottomWidth: 1, borderBottomColor: Colors.border, backgroundColor: Colors.card },
+  agentBar: { flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderBottomWidth: 1, borderBottomColor: Colors.border, backgroundColor: Colors.card },
   agentAvatar: { width: 42, height: 42, borderRadius: 21 },
+  agentBarInfo: { flex: 1 },
   agentName: { fontSize: 16, fontWeight: "700", color: Colors.foreground },
   agentSub: { fontSize: 12, color: Colors.mutedForeground },
+  agentBarActions: { flexDirection: "row", gap: 6 },
+  agentBarBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.background,
+  },
+  agentBarBtnPrimary: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  agentBarBtnText: { fontSize: 12, fontWeight: "600", color: Colors.foreground },
+  agentBarBtnTextPrimary: { color: "#fff" },
   messageList: { padding: 16, gap: 8, paddingBottom: 8 },
   emptyChat: { flex: 1, alignItems: "center", paddingTop: 80 },
   emptyChatText: { color: Colors.mutedForeground, fontSize: 16 },
@@ -179,7 +214,9 @@ const styles = StyleSheet.create({
   bubbleText: { fontSize: 15, lineHeight: 21 },
   bubbleTextMe: { color: "#fff" },
   bubbleTextThem: { color: Colors.foreground },
-  bubbleTime: { fontSize: 10, color: "rgba(255,255,255,0.6)", marginTop: 4, alignSelf: "flex-end" },
+  bubbleTime: { fontSize: 10, marginTop: 4, alignSelf: "flex-end" },
+  bubbleTimeMe: { color: "rgba(255,255,255,0.6)" },
+  bubbleTimeThem: { color: Colors.mutedForeground },
   inputBar: { flexDirection: "row", alignItems: "flex-end", padding: 12, gap: 10, borderTopWidth: 1, borderTopColor: Colors.border, backgroundColor: Colors.background },
   textInput: { flex: 1, borderWidth: 1, borderColor: Colors.border, borderRadius: 22, paddingHorizontal: 16, paddingVertical: 10, fontSize: 15, color: Colors.foreground, maxHeight: 100, backgroundColor: Colors.card },
   sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.primary, justifyContent: "center", alignItems: "center" },

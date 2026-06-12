@@ -8,6 +8,8 @@ import * as SecureStore from "expo-secure-store";
 import { useAuth } from "@/lib/auth";
 import { Colors } from "@/lib/constants";
 import { SettingsRow } from "@/components/SettingsRow";
+import { registerForPushNotifications, presentLocalNotification } from "@/lib/notifications";
+import { haptics } from "@/lib/haptics";
 
 const PUSH_NOTIFICATIONS_KEY = "homematch_push_notifications_enabled";
 
@@ -40,6 +42,18 @@ export default function SettingsScreen() {
     try {
       await SecureStore.setItemAsync(PUSH_NOTIFICATIONS_KEY, value ? "true" : "false");
     } catch {}
+    // When enabling, register the device with the backend so it can receive push.
+    if (value) registerForPushNotifications();
+  }
+
+  async function sendTestNotification() {
+    haptics.light();
+    await presentLocalNotification(
+      "🔔 Test notification",
+      "Notifications are working! Tap to open your alerts.",
+      { type: "default" }
+    );
+    Alert.alert("Sent", "A test notification has been delivered.");
   }
 
   async function handleSignOut() {
@@ -106,6 +120,12 @@ export default function SettingsScreen() {
               thumbColor="#fff"
             />
           </View>
+          <Divider />
+          <SettingsRow
+            icon="📨"
+            label="Send a test notification"
+            onPress={sendTestNotification}
+          />
         </View>
 
         {/* App */}
