@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   View, Text, TouchableOpacity, StyleSheet, SafeAreaView,
   ScrollView, Alert, ActivityIndicator, Dimensions, Animated,
@@ -6,7 +6,7 @@ import {
 import { useRouter } from "expo-router";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
-import { Colors } from "@/lib/constants";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 
@@ -88,7 +88,8 @@ const SUMMARY_LABELS: Record<string, string> = {
   communicationStyle: "Communication",
 };
 
-function ProgressDots({ total, current }: { total: number; current: number }) {
+function ProgressDots({ total, current, colors }: { total: number; current: number; colors: ThemeColors }) {
+  const dotStyles = useMemo(() => makeDotStyles(colors), [colors]);
   return (
     <View style={dotStyles.row}>
       {Array.from({ length: total }).map((_, i) => (
@@ -101,15 +102,17 @@ function ProgressDots({ total, current }: { total: number; current: number }) {
   );
 }
 
-const dotStyles = StyleSheet.create({
+const makeDotStyles = (c: ThemeColors) => StyleSheet.create({
   row: { flexDirection: "row", gap: 6, justifyContent: "center", marginTop: 16 },
   dot: { height: 6, borderRadius: 3 },
-  dotActive: { width: 24, backgroundColor: Colors.primary },
-  dotDone: { width: 6, backgroundColor: Colors.primary, opacity: 0.4 },
-  dotPending: { width: 6, backgroundColor: Colors.border },
+  dotActive: { width: 24, backgroundColor: c.primary },
+  dotDone: { width: 6, backgroundColor: c.primary, opacity: 0.4 },
+  dotPending: { width: 6, backgroundColor: c.border },
 });
 
 export default function OnboardingScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [step, setStep] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -206,7 +209,7 @@ export default function OnboardingScreen() {
         <>
           <Animated.View style={[styles.contentWrap, contentStyle]}>
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-              <ProgressDots total={STEPS.length} current={step} />
+              <ProgressDots total={STEPS.length} current={step} colors={colors} />
 
               <View style={styles.stepHeader}>
                 <Text style={styles.stepEmoji}>{current.emoji}</Text>
@@ -294,24 +297,24 @@ export default function OnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  progressTrack: { height: 4, backgroundColor: Colors.muted },
-  progressFill: { height: 4, backgroundColor: Colors.primary, borderRadius: 2 },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
+  progressTrack: { height: 4, backgroundColor: c.muted },
+  progressFill: { height: 4, backgroundColor: c.primary, borderRadius: 2 },
   contentWrap: { flex: 1 },
-  content: { padding: 24, paddingTop: 16 },
+  content: { padding: 24, paddingTop: 16, paddingBottom: 48 },
   stepHeader: { marginBottom: 28, alignItems: "flex-start" },
   stepEmoji: { fontSize: 40, marginBottom: 10 },
-  stepCount: { color: Colors.primary, fontSize: 12, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 },
-  title: { fontSize: 28, fontWeight: "800", color: Colors.foreground, marginBottom: 8, letterSpacing: -0.5 },
-  subtitle: { fontSize: 15, color: Colors.mutedForeground, lineHeight: 21 },
+  stepCount: { color: c.primary, fontSize: 12, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 },
+  title: { fontSize: 28, fontWeight: "800", color: c.foreground, marginBottom: 8, letterSpacing: -0.5 },
+  subtitle: { fontSize: 15, color: c.mutedForeground, lineHeight: 21 },
   options: { gap: 10 },
   option: {
     padding: 18,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.background,
+    borderColor: c.border,
+    backgroundColor: c.background,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -321,15 +324,15 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
   },
   optionSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
-    shadowColor: Colors.primary,
+    borderColor: c.primary,
+    backgroundColor: c.primaryLight,
+    shadowColor: c.primary,
     shadowOpacity: 0.1,
     shadowRadius: 8,
   },
-  optionText: { fontSize: 16, color: Colors.foreground, fontWeight: "500", flex: 1 },
-  optionTextSelected: { color: Colors.primary, fontWeight: "700" },
-  checkCircle: { width: 24, height: 24, borderRadius: 12, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center" },
+  optionText: { fontSize: 16, color: c.foreground, fontWeight: "500", flex: 1 },
+  optionTextSelected: { color: c.primary, fontWeight: "700" },
+  checkCircle: { width: 24, height: 24, borderRadius: 12, backgroundColor: c.primary, alignItems: "center", justifyContent: "center" },
   checkmark: { color: "#fff", fontSize: 13, fontWeight: "800" },
   footer: {
     flexDirection: "row",
@@ -337,18 +340,18 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
     gap: 12,
     borderTopWidth: 1,
-    borderTopColor: Colors.cardBorder,
-    backgroundColor: Colors.background,
+    borderTopColor: c.cardBorder,
+    backgroundColor: c.background,
   },
   backBtn: { paddingVertical: 16, paddingHorizontal: 12, justifyContent: "center" },
-  backText: { color: Colors.mutedForeground, fontWeight: "600", fontSize: 15 },
+  backText: { color: c.mutedForeground, fontWeight: "600", fontSize: 15 },
   nextBtn: {
     flex: 1,
-    backgroundColor: Colors.primary,
+    backgroundColor: c.primary,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: "center",
-    shadowColor: Colors.primary,
+    shadowColor: c.primary,
     shadowOpacity: 0.3,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -359,16 +362,16 @@ const styles = StyleSheet.create({
 
   summaryContent: { padding: 24, paddingTop: 32, alignItems: "center" },
   summaryEmoji: { fontSize: 64, marginBottom: 16 },
-  summaryTitle: { fontSize: 28, fontWeight: "800", color: Colors.foreground, marginBottom: 8 },
-  summarySub: { fontSize: 14, color: Colors.mutedForeground, textAlign: "center", lineHeight: 20, marginBottom: 28 },
+  summaryTitle: { fontSize: 28, fontWeight: "800", color: c.foreground, marginBottom: 8 },
+  summarySub: { fontSize: 14, color: c.mutedForeground, textAlign: "center", lineHeight: 20, marginBottom: 28 },
   summaryCard: {
     width: "100%",
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: c.cardBorder,
     overflow: "hidden",
-    shadowColor: Colors.shadowColor,
+    shadowColor: c.shadowColor,
     shadowOpacity: 0.06,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -381,8 +384,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.cardBorder,
+    borderBottomColor: c.cardBorder,
   },
-  summaryLabel: { fontSize: 13, color: Colors.mutedForeground, fontWeight: "600" },
-  summaryValue: { fontSize: 14, color: Colors.foreground, fontWeight: "700", maxWidth: "55%", textAlign: "right" },
+  summaryLabel: { fontSize: 13, color: c.mutedForeground, fontWeight: "600" },
+  summaryValue: { fontSize: 14, color: c.foreground, fontWeight: "700", maxWidth: "55%", textAlign: "right" },
 });

@@ -7,6 +7,7 @@ import { seedDatabase } from "./seed";
 import { insertLikeSchema, insertMessageSchema, insertBookingSchema, insertReviewSchema } from "@shared/schema";
 import { z } from "zod";
 import { Server as SocketIOServer } from "socket.io";
+import { verifyToken } from "./jwt";
 import { searchRealEstateAgents, getPlacePhotoUrl } from "./integrations/google-places";
 import { getMarketStatsByZip } from "./integrations/rentcast";
 
@@ -39,10 +40,23 @@ export async function registerRoutes(
   });
 
   io.on("connection", (socket) => {
+    // Resolve the connecting user: web clients carry a passport session cookie,
+    // mobile clients pass a JWT in the socket handshake auth payload.
+    function resolveSocketUserId(): string | null {
+      const sessionUserId = (socket.request as any).session?.passport?.user;
+      if (sessionUserId) return sessionUserId;
+      const token = (socket.handshake.auth as any)?.token;
+      if (typeof token === "string") {
+        const payload = verifyToken(token);
+        if (payload) return payload.userId;
+      }
+      return null;
+    }
+
     // Verify ownership before allowing a socket to subscribe to a match room
     socket.on("join-match", async (matchId: string) => {
       try {
-        const userId = (socket.request as any).session?.passport?.user;
+        const userId = resolveSocketUserId();
         if (!userId) return;
         const match = await storage.getMatch(matchId);
         if (!match) return;
@@ -54,6 +68,14 @@ export async function registerRoutes(
         // silently drop unauthorized join attempts
       }
     });
+
+    // Relay typing signals to the other participant in the room. Read-only,
+    // best-effort: only sockets already joined to the room can broadcast.
+    socket.on("typing", (matchId: string, isTyping: boolean) => {
+      if (typeof matchId !== "string" || !socket.rooms.has(`match-${matchId}`)) return;
+      socket.to(`match-${matchId}`).emit("typing", { matchId, isTyping: Boolean(isTyping) });
+    });
+
     // send-message via socket is intentionally removed — REST endpoints are the
     // authoritative write path (/api/messages, /api/agent-portal/messages) and
     // enforce authentication. Real-time delivery is handled by io.emit after REST saves.

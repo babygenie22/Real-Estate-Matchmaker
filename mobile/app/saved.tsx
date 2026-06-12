@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   View, Text, FlatList, TouchableOpacity, Image, StyleSheet,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { Colors } from "@/lib/constants";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 import { SkeletonRow } from "@/components/Skeleton";
 import { VerifiedBadge, isVerified } from "@/components/VerifiedBadge";
 import { useFavorites, FavoriteAgent } from "@/lib/favorites";
@@ -15,6 +15,8 @@ export default function SavedScreen() {
   const { favorites, toggleFavorite, refresh, loading } = useFavorites();
   const [selected, setSelected] = useState<string[]>([]);
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   useEffect(() => { refresh(); }, []);
 
@@ -110,6 +112,8 @@ function SavedCard({
   onRemove: () => void;
   onPress: () => void;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const avatarUri = agent.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&size=120&background=dbeafe&color=2563eb`;
 
   return (
@@ -172,51 +176,51 @@ function SavedCard({
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
   list: { padding: 16, gap: 12 },
   card: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderRadius: 18,
     padding: 16,
     gap: 12,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    shadowColor: Colors.shadowColor,
+    borderColor: c.cardBorder,
+    shadowColor: c.shadowColor,
     shadowOpacity: 0.06,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
   },
-  avatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: Colors.primaryLight },
+  avatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: c.primaryLight },
   info: { flex: 1, gap: 4 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  name: { fontSize: 16, fontWeight: "800", color: Colors.foreground, flexShrink: 1 },
+  name: { fontSize: 16, fontWeight: "800", color: c.foreground, flexShrink: 1 },
   ratingRow: { flexDirection: "row", alignItems: "center", gap: 3, flexWrap: "wrap" },
   star: { fontSize: 12 },
-  ratingText: { fontSize: 13, fontWeight: "700", color: Colors.foreground },
-  ratingCount: { fontSize: 12, color: Colors.mutedForeground },
-  dot: { fontSize: 12, color: Colors.mutedForeground },
-  metaText: { fontSize: 12, color: Colors.mutedForeground },
-  areas: { fontSize: 12, color: Colors.mutedForeground, marginTop: 2 },
+  ratingText: { fontSize: 13, fontWeight: "700", color: c.foreground },
+  ratingCount: { fontSize: 12, color: c.mutedForeground },
+  dot: { fontSize: 12, color: c.mutedForeground },
+  metaText: { fontSize: 12, color: c.mutedForeground },
+  areas: { fontSize: 12, color: c.mutedForeground, marginTop: 2 },
   tagRow: { flexDirection: "row", gap: 6, flexWrap: "wrap", marginTop: 4 },
-  tag: { backgroundColor: Colors.primaryLight, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  tagText: { fontSize: 11, color: Colors.primary, fontWeight: "600" },
+  tag: { backgroundColor: c.primaryLight, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  tagText: { fontSize: 11, color: c.primary, fontWeight: "600" },
   removeBtn: { marginTop: 6, alignSelf: "flex-start" },
-  removeBtnText: { fontSize: 12, color: Colors.destructive, fontWeight: "600" },
+  removeBtnText: { fontSize: 12, color: c.destructive, fontWeight: "600" },
   checkbox: {
     width: 28,
     height: 28,
     borderRadius: 14,
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: c.border,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
   },
-  checkboxOn: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  checkboxOn: { backgroundColor: c.primary, borderColor: c.primary },
   checkboxCheck: { color: "#fff", fontSize: 15, fontWeight: "900" },
   bottomBar: {
     position: "absolute",
@@ -225,37 +229,37 @@ const styles = StyleSheet.create({
     right: 0,
     padding: 16,
     paddingBottom: 28,
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderTopWidth: 1,
-    borderTopColor: Colors.cardBorder,
+    borderTopColor: c.cardBorder,
     alignItems: "center",
     justifyContent: "center",
   },
   compareBtn: {
     width: "100%",
-    backgroundColor: Colors.primary,
+    backgroundColor: c.primary,
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: "center",
-    shadowColor: Colors.primary,
+    shadowColor: c.primary,
     shadowOpacity: 0.3,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
     elevation: 3,
   },
   compareBtnText: { color: "#fff", fontWeight: "800", fontSize: 15 },
-  hint: { fontSize: 14, color: Colors.mutedForeground, fontWeight: "500" },
+  hint: { fontSize: 14, color: c.mutedForeground, fontWeight: "500" },
   empty: { flex: 1, justifyContent: "center", alignItems: "center", padding: 32, gap: 12 },
   emptyEmoji: { fontSize: 64 },
-  emptyTitle: { fontSize: 22, fontWeight: "700", color: Colors.foreground },
-  emptySub: { fontSize: 15, color: Colors.mutedForeground, textAlign: "center", lineHeight: 22 },
+  emptyTitle: { fontSize: 22, fontWeight: "700", color: c.foreground },
+  emptySub: { fontSize: 15, color: c.mutedForeground, textAlign: "center", lineHeight: 22 },
   discoverBtn: {
     marginTop: 12,
-    backgroundColor: Colors.primary,
+    backgroundColor: c.primary,
     borderRadius: 14,
     paddingVertical: 13,
     paddingHorizontal: 28,
-    shadowColor: Colors.primary,
+    shadowColor: c.primary,
     shadowOpacity: 0.3,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },

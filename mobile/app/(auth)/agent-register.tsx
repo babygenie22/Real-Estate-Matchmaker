@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   SafeAreaView, ScrollView, Alert, ActivityIndicator,
@@ -6,7 +6,7 @@ import {
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { api, setToken } from "@/lib/api";
-import { Colors } from "@/lib/constants";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 
 const TOTAL_STEPS = 7;
 
@@ -43,6 +43,8 @@ function formatPrice(value: number): string {
 }
 
 function ProgressBar({ step }: { step: number }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const progressAnim = useRef(new Animated.Value(((step + 1) / TOTAL_STEPS) * 100)).current;
 
   useEffect(() => {
@@ -69,31 +71,60 @@ function ChipSelect({
   options,
   selected,
   onToggle,
+  searchable = false,
 }: {
   options: string[];
   selected: string[];
   onToggle: (val: string) => void;
+  searchable?: boolean;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  // Selected chips always stay visible so users can de-select while filtering.
+  const visible = q
+    ? options.filter((o) => o.toLowerCase().includes(q) || selected.includes(o))
+    : options;
   return (
-    <View style={styles.chipWrap}>
-      {options.map((opt) => {
-        const active = selected.includes(opt);
-        return (
-          <TouchableOpacity
-            key={opt}
-            style={[styles.chip, active && styles.chipActive]}
-            onPress={() => onToggle(opt)}
-            activeOpacity={0.75}
-          >
-            <Text style={[styles.chipText, active && styles.chipTextActive]}>{opt}</Text>
-          </TouchableOpacity>
-        );
-      })}
+    <View>
+      {searchable && (
+        <TextInput
+          style={styles.chipSearch}
+          placeholder="Search…"
+          value={query}
+          onChangeText={setQuery}
+          autoCorrect={false}
+          autoCapitalize="none"
+          clearButtonMode="while-editing"
+          placeholderTextColor={colors.mutedForeground}
+        />
+      )}
+      <View style={styles.chipWrap}>
+        {visible.map((opt) => {
+          const active = selected.includes(opt);
+          return (
+            <TouchableOpacity
+              key={opt}
+              style={[styles.chip, active && styles.chipActive]}
+              onPress={() => onToggle(opt)}
+              activeOpacity={0.75}
+            >
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>{opt}</Text>
+            </TouchableOpacity>
+          );
+        })}
+        {searchable && q !== "" && visible.length === selected.length && (
+          <Text style={styles.chipNoResults}>No matches for "{query}"</Text>
+        )}
+      </View>
     </View>
   );
 }
 
 export default function AgentRegisterScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const params = useLocalSearchParams<{ email: string; password: string }>();
   const email = params.email ?? "";
@@ -124,6 +155,41 @@ export default function AgentRegisterScreen() {
 
   // Step 6 — Photo URL
   const [photo, setPhoto] = useState("");
+
+  async function pickPhoto() {
+    // Lazy require so a missing native module degrades to URL-only input.
+    let ImagePicker: any = null;
+    try {
+      ImagePicker = require("expo-image-picker");
+    } catch {
+      Alert.alert("Unavailable", "Photo library access isn't available — paste a photo URL instead.");
+      return;
+    }
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert("Permission needed", "Allow photo access in Settings to upload a headshot, or paste a URL instead.");
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+        base64: true,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+      const asset = result.assets[0];
+      // Store as a data URI so the backend can serve it without a separate upload pipeline.
+      if (asset.base64) {
+        setPhoto(`data:image/jpeg;base64,${asset.base64}`);
+      } else if (asset.uri) {
+        setPhoto(asset.uri);
+      }
+    } catch {
+      Alert.alert("Couldn't open photos", "Paste a photo URL instead.");
+    }
+  }
 
   // Animation
   const slideX = useRef(new Animated.Value(0)).current;
@@ -268,7 +334,7 @@ export default function AgentRegisterScreen() {
                   value={name}
                   onChangeText={setName}
                   autoCapitalize="words"
-                  placeholderTextColor={Colors.mutedForeground}
+                  placeholderTextColor={colors.mutedForeground}
                 />
               </View>
 
@@ -280,7 +346,7 @@ export default function AgentRegisterScreen() {
                   value={phone}
                   onChangeText={setPhone}
                   keyboardType="phone-pad"
-                  placeholderTextColor={Colors.mutedForeground}
+                  placeholderTextColor={colors.mutedForeground}
                 />
               </View>
 
@@ -327,7 +393,7 @@ export default function AgentRegisterScreen() {
                   value={licenseNumber}
                   onChangeText={setLicenseNumber}
                   autoCapitalize="characters"
-                  placeholderTextColor={Colors.mutedForeground}
+                  placeholderTextColor={colors.mutedForeground}
                 />
               </View>
 
@@ -338,6 +404,7 @@ export default function AgentRegisterScreen() {
                   options={MICHIGAN_CITIES}
                   selected={serviceAreas}
                   onToggle={(v) => toggleChip(serviceAreas, setServiceAreas, v)}
+                  searchable
                 />
               </View>
             </View>
@@ -383,7 +450,7 @@ export default function AgentRegisterScreen() {
                   onChangeText={(t) => setBio(t.slice(0, 500))}
                   multiline
                   numberOfLines={5}
-                  placeholderTextColor={Colors.mutedForeground}
+                  placeholderTextColor={colors.mutedForeground}
                   textAlignVertical="top"
                 />
               </View>
@@ -421,7 +488,7 @@ export default function AgentRegisterScreen() {
                     value={priceMin}
                     onChangeText={(t) => setPriceMin(t.replace(/[^0-9]/g, ""))}
                     keyboardType="numeric"
-                    placeholderTextColor={Colors.mutedForeground}
+                    placeholderTextColor={colors.mutedForeground}
                   />
                   {priceMin ? (
                     <Text style={styles.pricePreview}>{formatPrice(parseInt(priceMin, 10) || 0)}</Text>
@@ -438,7 +505,7 @@ export default function AgentRegisterScreen() {
                     value={priceMax}
                     onChangeText={(t) => setPriceMax(t.replace(/[^0-9]/g, ""))}
                     keyboardType="numeric"
-                    placeholderTextColor={Colors.mutedForeground}
+                    placeholderTextColor={colors.mutedForeground}
                   />
                   {priceMax ? (
                     <Text style={styles.pricePreview}>{formatPrice(parseInt(priceMax, 10) || 0)}</Text>
@@ -498,20 +565,25 @@ export default function AgentRegisterScreen() {
               ) : null}
             </View>
 
+            <TouchableOpacity style={styles.uploadBtn} onPress={pickPhoto} activeOpacity={0.8}>
+              <Text style={styles.uploadBtnIcon}>🖼️</Text>
+              <Text style={styles.uploadBtnText}>{photo ? "Choose a different photo" : "Choose from library"}</Text>
+            </TouchableOpacity>
+
             <View style={styles.fieldGroup}>
               <View style={styles.fieldWrap}>
-                <Text style={styles.fieldLabel}>Photo URL</Text>
+                <Text style={styles.fieldLabel}>Or paste a photo URL</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="https://example.com/headshot.jpg"
-                  value={photo}
+                  value={photo.startsWith("data:") ? "" : photo}
                   onChangeText={setPhoto}
                   autoCapitalize="none"
                   autoCorrect={false}
                   keyboardType="url"
-                  placeholderTextColor={Colors.mutedForeground}
+                  placeholderTextColor={colors.mutedForeground}
                 />
-                <Text style={styles.fieldHint}>Paste a link to your professional headshot (LinkedIn, company website, etc.)</Text>
+                <Text style={styles.fieldHint}>Link to your professional headshot (LinkedIn, company website, etc.)</Text>
               </View>
             </View>
           </ScrollView>
@@ -601,6 +673,8 @@ export default function AgentRegisterScreen() {
 }
 
 function ReviewRow({ label, value }: { label: string; value: string }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.reviewRow}>
       <Text style={styles.reviewLabel}>{label}</Text>
@@ -609,39 +683,39 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  progressTrack: { height: 4, backgroundColor: Colors.muted },
-  progressFill: { height: 4, backgroundColor: Colors.primary, borderRadius: 2 },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
+  progressTrack: { height: 4, backgroundColor: c.muted },
+  progressFill: { height: 4, backgroundColor: c.primary, borderRadius: 2 },
 
   content: { padding: 24, paddingTop: 20, paddingBottom: 40 },
 
   stepHeader: { marginBottom: 28, alignItems: "flex-start" },
   stepEmoji: { fontSize: 40, marginBottom: 10 },
   stepCount: {
-    color: Colors.primary,
+    color: c.primary,
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
     marginBottom: 6,
   },
-  title: { fontSize: 28, fontWeight: "800", color: Colors.foreground, marginBottom: 8, letterSpacing: -0.5 },
-  subtitle: { fontSize: 15, color: Colors.mutedForeground, lineHeight: 21 },
+  title: { fontSize: 28, fontWeight: "800", color: c.foreground, marginBottom: 8, letterSpacing: -0.5 },
+  subtitle: { fontSize: 15, color: c.mutedForeground, lineHeight: 21 },
 
   fieldGroup: { gap: 20 },
   fieldWrap: { gap: 6 },
-  fieldLabel: { fontSize: 13, fontWeight: "700", color: Colors.foregroundSecondary },
-  fieldHint: { fontSize: 12, color: Colors.mutedForeground, marginTop: -2 },
+  fieldLabel: { fontSize: 13, fontWeight: "700", color: c.foregroundSecondary },
+  fieldHint: { fontSize: 12, color: c.mutedForeground, marginTop: -2 },
   input: {
     borderWidth: 1.5,
-    borderColor: Colors.border,
+    borderColor: c.border,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 13,
     fontSize: 16,
-    color: Colors.foreground,
-    backgroundColor: Colors.background,
+    color: c.foreground,
+    backgroundColor: c.background,
   },
   textArea: {
     minHeight: 120,
@@ -658,51 +732,63 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: Colors.muted,
+    backgroundColor: c.muted,
     borderWidth: 1.5,
-    borderColor: Colors.border,
+    borderColor: c.border,
     alignItems: "center",
     justifyContent: "center",
   },
-  stepperBtnText: { fontSize: 22, color: Colors.foreground, fontWeight: "600", lineHeight: 26 },
-  stepperValue: { fontSize: 18, fontWeight: "700", color: Colors.foreground, minWidth: 90, textAlign: "center" },
+  stepperBtnText: { fontSize: 22, color: c.foreground, fontWeight: "600", lineHeight: 26 },
+  stepperValue: { fontSize: 18, fontWeight: "700", color: c.foreground, minWidth: 90, textAlign: "center" },
 
   chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 },
+  chipSearch: {
+    borderWidth: 1.5,
+    borderColor: c.border,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: c.foreground,
+    backgroundColor: c.background,
+    marginTop: 8,
+  },
+  chipNoResults: { fontSize: 13, color: c.mutedForeground, paddingVertical: 8 },
   chip: {
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.background,
+    borderColor: c.border,
+    backgroundColor: c.background,
   },
   chipActive: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
+    borderColor: c.primary,
+    backgroundColor: c.primaryLight,
   },
-  chipText: { fontSize: 14, color: Colors.foreground, fontWeight: "500" },
-  chipTextActive: { color: Colors.primary, fontWeight: "700" },
+  chipText: { fontSize: 14, color: c.foreground, fontWeight: "500" },
+  chipTextActive: { color: c.primary, fontWeight: "700" },
 
   priceRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
   priceDivider: { justifyContent: "center", paddingTop: 36 },
-  priceDividerText: { color: Colors.mutedForeground, fontSize: 14, fontWeight: "600" },
+  priceDividerText: { color: c.mutedForeground, fontSize: 14, fontWeight: "600" },
   pricePreview: {
     fontSize: 13,
-    color: Colors.primary,
+    color: c.primary,
     fontWeight: "700",
     marginTop: 4,
     textAlign: "center",
   },
   priceExamples: { gap: 8 },
-  priceExamplesLabel: { fontSize: 13, fontWeight: "600", color: Colors.foregroundSecondary },
+  priceExamplesLabel: { fontSize: 13, fontWeight: "600", color: c.foregroundSecondary },
 
   reviewCard: {
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: c.cardBorder,
     overflow: "hidden",
-    shadowColor: Colors.shadowColor,
+    shadowColor: c.shadowColor,
     shadowOpacity: 0.06,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -715,11 +801,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.cardBorder,
+    borderBottomColor: c.cardBorder,
     gap: 12,
   },
-  reviewLabel: { fontSize: 13, color: Colors.mutedForeground, fontWeight: "600", minWidth: 90 },
-  reviewValue: { fontSize: 14, color: Colors.foreground, fontWeight: "700", flex: 1, textAlign: "right" },
+  reviewLabel: { fontSize: 13, color: c.mutedForeground, fontWeight: "600", minWidth: 90 },
+  reviewValue: { fontSize: 14, color: c.foreground, fontWeight: "700", flex: 1, textAlign: "right" },
 
   footer: {
     flexDirection: "row",
@@ -727,18 +813,18 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
     gap: 12,
     borderTopWidth: 1,
-    borderTopColor: Colors.cardBorder,
-    backgroundColor: Colors.background,
+    borderTopColor: c.cardBorder,
+    backgroundColor: c.background,
   },
   backBtn: { paddingVertical: 16, paddingHorizontal: 12, justifyContent: "center" },
-  backText: { color: Colors.mutedForeground, fontWeight: "600", fontSize: 15 },
+  backText: { color: c.mutedForeground, fontWeight: "600", fontSize: 15 },
   nextBtn: {
     flex: 1,
-    backgroundColor: Colors.primary,
+    backgroundColor: c.primary,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: "center",
-    shadowColor: Colors.primary,
+    shadowColor: c.primary,
     shadowOpacity: 0.3,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -749,24 +835,24 @@ const styles = StyleSheet.create({
 
   // Photo step
   photoPreviewWrap: { alignItems: "center", marginBottom: 24 },
-  photoPreview: { width: 120, height: 120, borderRadius: 60, borderWidth: 3, borderColor: Colors.primary },
+  photoPreview: { width: 120, height: 120, borderRadius: 60, borderWidth: 3, borderColor: c.primary },
   photoPlaceholder: {
     width: 120, height: 120, borderRadius: 60,
-    backgroundColor: Colors.muted, borderWidth: 2, borderColor: Colors.border,
+    backgroundColor: c.muted, borderWidth: 2, borderColor: c.border,
     alignItems: "center", justifyContent: "center",
   },
   photoPlaceholderIcon: { fontSize: 48 },
-  removePhotoBtn: { marginTop: 10, paddingVertical: 6, paddingHorizontal: 14, borderRadius: 20, backgroundColor: Colors.destructiveLight },
-  removePhotoBtnText: { fontSize: 13, color: Colors.destructive, fontWeight: "700" },
+  removePhotoBtn: { marginTop: 10, paddingVertical: 6, paddingHorizontal: 14, borderRadius: 20, backgroundColor: c.destructiveLight },
+  removePhotoBtnText: { fontSize: 13, color: c.destructive, fontWeight: "700" },
   uploadBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: 10, paddingVertical: 16, borderRadius: 14,
-    borderWidth: 2, borderColor: Colors.primary, borderStyle: "dashed",
-    backgroundColor: Colors.primaryLight,
+    borderWidth: 2, borderColor: c.primary, borderStyle: "dashed",
+    backgroundColor: c.primaryLight,
   },
   uploadBtnIcon: { fontSize: 22 },
-  uploadBtnText: { fontSize: 16, fontWeight: "700", color: Colors.primary },
+  uploadBtnText: { fontSize: 16, fontWeight: "700", color: c.primary },
   dividerRow: { flexDirection: "row", alignItems: "center", gap: 12, marginVertical: 4 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: Colors.border },
-  dividerLabel: { fontSize: 13, color: Colors.mutedForeground, fontWeight: "500" },
+  dividerLine: { flex: 1, height: 1, backgroundColor: c.border },
+  dividerLabel: { fontSize: 13, color: c.mutedForeground, fontWeight: "500" },
 });

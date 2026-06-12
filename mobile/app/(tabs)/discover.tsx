@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   View, Text, TouchableOpacity, StyleSheet, SafeAreaView,
   Dimensions, ActivityIndicator, Alert, ScrollView,
@@ -8,7 +8,7 @@ import SwipeCard from "@/components/SwipeCard";
 import { SkeletonCard } from "@/components/Skeleton";
 import { haptics } from "@/lib/haptics";
 import { api } from "@/lib/api";
-import { Colors } from "@/lib/constants";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 const CARD_W = SCREEN_W - 32;
@@ -47,6 +47,8 @@ const AREA_FILTERS = [
 ];
 
 export default function DiscoverScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeSpecialty, setActiveSpecialty] = useState("");
@@ -175,7 +177,7 @@ export default function DiscoverScreen() {
           <Text style={styles.savedLinkText}>🔖 Saved</Text>
         </TouchableOpacity>
         {loading ? (
-          <ActivityIndicator size="small" color={Colors.primary} style={styles.refreshSlot} />
+          <ActivityIndicator size="small" color={colors.primary} style={styles.refreshSlot} />
         ) : (
           <TouchableOpacity style={styles.refreshSlot} onPress={loadAgents} activeOpacity={0.7}>
             <Text style={styles.refreshLink}>🔄 Refresh</Text>
@@ -294,10 +296,10 @@ export default function DiscoverScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
   centered: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12 },
-  loadingText: { color: Colors.mutedForeground, fontSize: 15 },
+  loadingText: { color: c.mutedForeground, fontSize: 15 },
   header: {
     paddingHorizontal: 20,
     paddingTop: 12,
@@ -307,32 +309,32 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   headerLeft: { flex: 1 },
-  headerTitle: { fontSize: 26, fontWeight: "900", color: Colors.foreground },
-  headerSub: { fontSize: 13, color: Colors.mutedForeground, marginTop: 2 },
+  headerTitle: { fontSize: 26, fontWeight: "900", color: c.foreground },
+  headerSub: { fontSize: 13, color: c.mutedForeground, marginTop: 2 },
   headerActions: { alignItems: "flex-end", gap: 8 },
   savedLink: { paddingVertical: 2 },
-  savedLinkText: { fontSize: 14, fontWeight: "700", color: Colors.foregroundSecondary },
+  savedLinkText: { fontSize: 14, fontWeight: "700", color: c.foregroundSecondary },
   refreshSlot: { minWidth: 72, alignItems: "flex-end", justifyContent: "center" },
-  refreshLink: { color: Colors.primary, fontSize: 14, fontWeight: "600" },
+  refreshLink: { color: c.primary, fontSize: 14, fontWeight: "600" },
   filterScroll: { flexGrow: 0 },
   filterRow: { paddingHorizontal: 16, paddingVertical: 6, gap: 8, flexDirection: "row" },
   chip: {
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 20,
-    backgroundColor: Colors.background,
+    backgroundColor: c.background,
     borderWidth: 1.5,
-    borderColor: Colors.border,
+    borderColor: c.border,
   },
   chipActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: c.primary,
     borderWidth: 1.5,
-    borderColor: Colors.primary,
+    borderColor: c.primary,
   },
   chipText: {
     fontSize: 13,
     fontWeight: "600",
-    color: Colors.foreground,
+    color: c.foreground,
   },
   chipTextActive: {
     color: "#ffffff",
@@ -349,16 +351,16 @@ const styles = StyleSheet.create({
   },
   backCardInner: {
     flex: 1,
-    backgroundColor: Colors.muted,
+    backgroundColor: c.muted,
     borderRadius: 20,
     transform: [{ scale: 0.96 }, { translateY: 12 }],
   },
   emptyState: { alignItems: "center", padding: 32, gap: 12 },
   emptyEmoji: { fontSize: 64 },
-  emptyTitle: { fontSize: 22, fontWeight: "700", color: Colors.foreground },
-  emptySub: { fontSize: 15, color: Colors.mutedForeground, textAlign: "center" },
+  emptyTitle: { fontSize: 22, fontWeight: "700", color: c.foreground },
+  emptySub: { fontSize: 15, color: c.mutedForeground, textAlign: "center" },
   refreshBtn: {
-    backgroundColor: Colors.primary,
+    backgroundColor: c.primary,
     borderRadius: 10,
     paddingHorizontal: 24,
     paddingVertical: 12,
@@ -370,7 +372,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     marginTop: 2,
   },
-  adjustBtnText: { color: Colors.foregroundSecondary, fontWeight: "600", fontSize: 14 },
+  adjustBtnText: { color: c.foregroundSecondary, fontWeight: "600", fontSize: 14 },
   undoRow: {
     alignItems: "center",
     justifyContent: "center",
@@ -379,12 +381,12 @@ const styles = StyleSheet.create({
   undoPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.muted,
+    backgroundColor: c.muted,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 18,
   },
-  undoText: { color: Colors.foregroundSecondary, fontSize: 13, fontWeight: "600" },
+  undoText: { color: c.foregroundSecondary, fontSize: 13, fontWeight: "600" },
   actions: {
     flexDirection: "row",
     justifyContent: "center",
@@ -405,8 +407,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 4,
   },
-  passBtn: { backgroundColor: "#fff", borderWidth: 2, borderColor: Colors.destructive },
-  likeBtn: { backgroundColor: "#fff", borderWidth: 2, borderColor: Colors.success },
-  infoBtn: { width: 56, height: 56, borderRadius: 28, backgroundColor: Colors.muted, justifyContent: "center", alignItems: "center" },
+  passBtn: { backgroundColor: c.card, borderWidth: 2, borderColor: c.destructive },
+  likeBtn: { backgroundColor: c.card, borderWidth: 2, borderColor: c.success },
+  infoBtn: { width: 56, height: 56, borderRadius: 28, backgroundColor: c.muted, justifyContent: "center", alignItems: "center" },
   actionEmoji: { fontSize: 26 },
 });

@@ -1,17 +1,28 @@
 import { Stack } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { StyleSheet } from "react-native";
+import { StyleSheet, StatusBar } from "react-native";
 import { AuthProvider } from "@/lib/auth";
 import { FavoritesProvider } from "@/lib/favorites";
+import { ThemeProvider, useTheme } from "@/lib/theme";
 import { NotificationManager } from "@/components/NotificationManager";
 
-export default function RootLayout() {
+function ThemedApp() {
+  const { colors, isDark } = useTheme();
   return (
-    <GestureHandlerRootView style={styles.root}>
+    <>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.background} />
       <AuthProvider>
         <FavoritesProvider>
           <NotificationManager />
-          <Stack screenOptions={{ headerShown: false }}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              headerStyle: { backgroundColor: colors.background },
+              headerTintColor: colors.foreground,
+              headerTitleStyle: { color: colors.foreground },
+              contentStyle: { backgroundColor: colors.background },
+            }}
+          >
             <Stack.Screen name="index" />
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(tabs)" />
@@ -29,6 +40,16 @@ export default function RootLayout() {
           </Stack>
         </FavoritesProvider>
       </AuthProvider>
+    </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <GestureHandlerRootView style={styles.root}>
+      <ThemeProvider>
+        <ThemedApp />
+      </ThemeProvider>
     </GestureHandlerRootView>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   View, Text, StyleSheet, SafeAreaView, ScrollView, Alert, Switch, Linking,
 } from "react-native";
@@ -6,24 +6,32 @@ import { useRouter } from "expo-router";
 import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
 import { useAuth } from "@/lib/auth";
-import { Colors } from "@/lib/constants";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 import { SettingsRow } from "@/components/SettingsRow";
 import { registerForPushNotifications, presentLocalNotification } from "@/lib/notifications";
 import { haptics } from "@/lib/haptics";
 
 const PUSH_NOTIFICATIONS_KEY = "homematch_push_notifications_enabled";
 
-function SectionHeader({ title }: { title: string }) {
+function SectionHeader({ title, styles }: { title: string; styles: ReturnType<typeof makeStyles> }) {
   return (
     <Text style={styles.sectionHeader}>{title.toUpperCase()}</Text>
   );
 }
 
-function Divider() {
+function Divider({ styles }: { styles: ReturnType<typeof makeStyles> }) {
   return <View style={styles.divider} />;
 }
 
+const APPEARANCE_OPTIONS = [
+  { value: "system", label: "Auto" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+] as const;
+
 export default function SettingsScreen() {
+  const { colors, preference, setPreference } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { logout } = useAuth();
   const router = useRouter();
   const [pushEnabled, setPushEnabled] = useState(true);
@@ -122,14 +130,14 @@ export default function SettingsScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
         {/* Account */}
-        <SectionHeader title="Account" />
+        <SectionHeader title="Account" styles={styles} />
         <View style={styles.section}>
           <SettingsRow
             icon="✏️"
             label="Edit Preferences"
             onPress={() => router.push("/onboarding")}
           />
-          <Divider />
+          <Divider styles={styles} />
           <View style={styles.toggleRow}>
             <View style={styles.toggleLeft}>
               <Text style={styles.toggleIcon}>🔔</Text>
@@ -138,39 +146,63 @@ export default function SettingsScreen() {
             <Switch
               value={pushEnabled}
               onValueChange={togglePush}
-              trackColor={{ false: Colors.border, true: Colors.primary }}
+              trackColor={{ false: colors.border, true: colors.primary }}
               thumbColor="#fff"
             />
           </View>
-          <Divider />
+          <Divider styles={styles} />
           <SettingsRow
             icon="📨"
             label="Send a test notification"
             onPress={sendTestNotification}
           />
+          <Divider styles={styles} />
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleLeft}>
+              <Text style={styles.toggleIcon}>🌗</Text>
+              <Text style={styles.toggleLabel}>Appearance</Text>
+            </View>
+            <View style={styles.segment}>
+              {APPEARANCE_OPTIONS.map((opt) => {
+                const active = preference === opt.value;
+                return (
+                  <Text
+                    key={opt.value}
+                    onPress={() => {
+                      haptics.selection();
+                      setPreference(opt.value);
+                    }}
+                    style={[styles.segmentItem, active && styles.segmentItemActive]}
+                  >
+                    {opt.label}
+                  </Text>
+                );
+              })}
+            </View>
+          </View>
         </View>
 
         {/* App */}
-        <SectionHeader title="App" />
+        <SectionHeader title="App" styles={styles} />
         <View style={styles.section}>
           <SettingsRow
             icon="🔒"
             label="Privacy Policy"
             onPress={() => router.push("/privacy-policy")}
           />
-          <Divider />
+          <Divider styles={styles} />
           <SettingsRow
             icon="📄"
             label="Terms of Service"
             onPress={() => router.push("/terms")}
           />
-          <Divider />
+          <Divider styles={styles} />
           <SettingsRow
             icon="⭐"
             label="Rate HomeMatch"
             onPress={handleRateApp}
           />
-          <Divider />
+          <Divider styles={styles} />
           <SettingsRow
             icon="ℹ️"
             label="App Version"
@@ -180,14 +212,14 @@ export default function SettingsScreen() {
         </View>
 
         {/* Support */}
-        <SectionHeader title="Support" />
+        <SectionHeader title="Support" styles={styles} />
         <View style={styles.section}>
           <SettingsRow
             icon="💬"
             label="Contact Support"
             onPress={handleContactSupport}
           />
-          <Divider />
+          <Divider styles={styles} />
           <SettingsRow
             icon="🐛"
             label="Report a Bug"
@@ -196,7 +228,7 @@ export default function SettingsScreen() {
         </View>
 
         {/* Danger Zone */}
-        <SectionHeader title="Danger Zone" />
+        <SectionHeader title="Danger Zone" styles={styles} />
         <View style={styles.section}>
           <SettingsRow
             icon="🚪"
@@ -204,7 +236,7 @@ export default function SettingsScreen() {
             onPress={handleSignOut}
             danger
           />
-          <Divider />
+          <Divider styles={styles} />
           <SettingsRow
             icon="🗑️"
             label="Delete Account"
@@ -222,23 +254,23 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: Colors.surface,
+    backgroundColor: c.surface,
   },
   header: {
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 12,
-    backgroundColor: Colors.background,
+    backgroundColor: c.background,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.cardBorder,
+    borderBottomColor: c.cardBorder,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: "700",
-    color: Colors.foreground,
+    color: c.foreground,
   },
   content: {
     paddingBottom: 40,
@@ -247,21 +279,21 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 1.1,
-    color: Colors.mutedForeground,
+    color: c.mutedForeground,
     paddingHorizontal: 20,
     paddingTop: 24,
     paddingBottom: 6,
   },
   section: {
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: c.cardBorder,
     overflow: "hidden",
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: Colors.cardBorder,
+    backgroundColor: c.cardBorder,
     marginLeft: 52,
   },
   toggleRow: {
@@ -281,8 +313,29 @@ const styles = StyleSheet.create({
   },
   toggleLabel: {
     fontSize: 16,
-    color: Colors.foreground,
+    color: c.foreground,
     fontWeight: "400",
+  },
+  segment: {
+    flexDirection: "row",
+    backgroundColor: c.muted,
+    borderRadius: 10,
+    padding: 3,
+    gap: 2,
+  },
+  segmentItem: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: c.mutedForeground,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  segmentItemActive: {
+    backgroundColor: c.card,
+    color: c.foreground,
+    fontWeight: "700",
   },
   footer: {
     alignItems: "center",
@@ -290,6 +343,6 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 13,
-    color: Colors.mutedForeground,
+    color: c.mutedForeground,
   },
 });

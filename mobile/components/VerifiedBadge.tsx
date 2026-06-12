@@ -1,5 +1,6 @@
+import { useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { Colors } from "@/lib/constants";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 
 /**
  * Trust badge shown on agent cards/profiles. An agent is "verified" when an
@@ -10,6 +11,8 @@ export function isVerified(agent: { isApproved?: boolean; licenseNumber?: string
 }
 
 export function VerifiedBadge({ size = "md", onLight = false }: { size?: "sm" | "md"; onLight?: boolean }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const compact = size === "sm";
   return (
     <View
@@ -25,19 +28,19 @@ export function VerifiedBadge({ size = "md", onLight = false }: { size?: "sm" | 
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   badge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: Colors.primary,
+    backgroundColor: c.primary,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
   badgeSm: { paddingHorizontal: 5, paddingVertical: 5, borderRadius: 10, gap: 0 },
   badgeOnLight: {
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: c.primaryLight,
   },
   check: { color: "#fff", fontSize: 11, fontWeight: "900" },
   checkSm: { fontSize: 10 },

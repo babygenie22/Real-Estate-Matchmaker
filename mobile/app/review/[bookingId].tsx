@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   View, Text, StyleSheet, SafeAreaView, TouchableOpacity,
   TextInput, Image, Alert, ActivityIndicator, ScrollView,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { api } from "@/lib/api";
-import { Colors } from "@/lib/constants";
+import { haptics } from "@/lib/haptics";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 
 interface Booking {
   id: string;
@@ -23,12 +24,14 @@ function StarRating({
   value: number;
   onChange: (v: number) => void;
 }) {
+  const { colors } = useTheme();
+  const starStyles = useMemo(() => makeStarStyles(colors), [colors]);
   return (
     <View style={starStyles.row}>
       {[1, 2, 3, 4, 5].map((star) => (
         <TouchableOpacity
           key={star}
-          onPress={() => onChange(star)}
+          onPress={() => { haptics.selection(); onChange(star); }}
           activeOpacity={0.7}
           style={starStyles.starBtn}
           hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
@@ -42,11 +45,11 @@ function StarRating({
   );
 }
 
-const starStyles = StyleSheet.create({
+const makeStarStyles = (c: ThemeColors) => StyleSheet.create({
   row: { flexDirection: "row", justifyContent: "center", gap: 8, marginVertical: 8 },
   starBtn: { padding: 4 },
-  star: { fontSize: 44, color: "#d1d5db" },
-  starFilled: { color: "#f59e0b" },
+  star: { fontSize: 44, color: c.border },
+  starFilled: { color: c.warning },
 });
 
 const RATING_LABELS: Record<number, string> = {
@@ -60,6 +63,8 @@ const RATING_LABELS: Record<number, string> = {
 export default function ReviewScreen() {
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
@@ -92,9 +97,15 @@ export default function ReviewScreen() {
         rating,
         comment: comment.trim() || undefined,
       });
-      Alert.alert("Review submitted! ⭐", "Thank you for sharing your experience.", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      haptics.success();
+      Alert.alert(
+        "Review submitted! ⭐",
+        `Thanks for sharing your experience — your review is now live on ${booking.agent?.name ?? "the agent"}'s profile.`,
+        [
+          { text: "View profile", onPress: () => router.replace(`/agent/${booking.agentId}` as any) },
+          { text: "Done", style: "cancel", onPress: () => router.back() },
+        ]
+      );
     } catch (err: any) {
       const status = err.message?.includes("409") || err.message?.toLowerCase().includes("already");
       if (status) {
@@ -115,7 +126,7 @@ export default function ReviewScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -169,7 +180,7 @@ export default function ReviewScreen() {
           <TextInput
             style={styles.textArea}
             placeholder="Share your experience with this agent..."
-            placeholderTextColor={Colors.mutedForeground}
+            placeholderTextColor={colors.mutedForeground}
             multiline
             numberOfLines={5}
             maxLength={300}
@@ -177,7 +188,9 @@ export default function ReviewScreen() {
             onChangeText={setComment}
             textAlignVertical="top"
           />
-          <Text style={styles.charCount}>{comment.length}/300</Text>
+          <Text style={[styles.charCount, comment.length >= 280 && { color: colors.warning, fontWeight: "700" }]}>
+            {comment.length}/300
+          </Text>
         </View>
 
         {/* Submit button */}
@@ -190,7 +203,9 @@ export default function ReviewScreen() {
           {submitting ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.submitBtnText}>Submit Review</Text>
+            <Text style={styles.submitBtnText}>
+              {rating === 0 ? "Select a rating to continue" : "Submit Review"}
+            </Text>
           )}
         </TouchableOpacity>
 
@@ -206,17 +221,17 @@ export default function ReviewScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
   centered: { flex: 1, justifyContent: "center", alignItems: "center", padding: 24 },
   scrollContent: { padding: 20, paddingBottom: 40 },
 
   agentCard: {
     alignItems: "center",
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: c.cardBorder,
     padding: 24,
     marginBottom: 16,
   },
@@ -229,26 +244,26 @@ const styles = StyleSheet.create({
   agentName: {
     fontSize: 20,
     fontWeight: "800",
-    color: Colors.foreground,
+    color: c.foreground,
     marginBottom: 4,
   },
   agentSubtitle: {
     fontSize: 13,
-    color: Colors.mutedForeground,
+    color: c.mutedForeground,
   },
 
   card: {
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: c.cardBorder,
     padding: 20,
     marginBottom: 16,
   },
   cardTitle: {
     fontSize: 15,
     fontWeight: "700",
-    color: Colors.foreground,
+    color: c.foreground,
     marginBottom: 12,
     textAlign: "center",
   },
@@ -256,37 +271,38 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 15,
     fontWeight: "600",
-    color: Colors.warning,
+    color: c.warning,
     marginTop: 4,
   },
 
   textArea: {
-    backgroundColor: Colors.surface,
+    backgroundColor: c.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: c.border,
     padding: 14,
     fontSize: 15,
-    color: Colors.foreground,
+    color: c.foreground,
     minHeight: 110,
     lineHeight: 22,
   },
   charCount: {
     fontSize: 11,
-    color: Colors.mutedForeground,
+    color: c.mutedForeground,
     textAlign: "right",
     marginTop: 6,
   },
 
   submitBtn: {
-    backgroundColor: Colors.primary,
+    backgroundColor: c.primary,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: "center",
     marginBottom: 12,
   },
   submitBtnDisabled: {
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: c.mutedForeground,
+    opacity: 0.5,
   },
   submitBtnText: {
     color: "#fff",
@@ -299,18 +315,18 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   cancelBtnText: {
-    color: Colors.mutedForeground,
+    color: c.mutedForeground,
     fontSize: 15,
     fontWeight: "600",
   },
 
   errorText: {
     fontSize: 16,
-    color: Colors.mutedForeground,
+    color: c.mutedForeground,
     marginBottom: 16,
   },
   backBtn: {
-    backgroundColor: Colors.primary,
+    backgroundColor: c.primary,
     borderRadius: 10,
     paddingHorizontal: 24,
     paddingVertical: 12,

@@ -1,11 +1,11 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   View, Text, TouchableOpacity, StyleSheet,
   SafeAreaView, FlatList, ActivityIndicator, RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { api } from "@/lib/api";
-import { Colors } from "@/lib/constants";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 
 interface BuyerMatch {
   id: string | number;
@@ -55,6 +55,8 @@ function formatTime(iso?: string): string {
 
 export default function AgentChatsScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [matches, setMatches] = useState<BuyerMatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -101,7 +103,7 @@ export default function AgentChatsScreen() {
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading conversations…</Text>
         </View>
       </SafeAreaView>
@@ -123,7 +125,7 @@ export default function AgentChatsScreen() {
         data={matches}
         keyExtractor={(item) => String(item.id)}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
         showsVerticalScrollIndicator={false}
         contentContainerStyle={matches.length === 0 ? styles.emptyContainer : styles.listContent}
@@ -177,8 +179,8 @@ export default function AgentChatsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
 
   header: {
     flexDirection: "row",
@@ -187,33 +189,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.cardBorder,
-    backgroundColor: Colors.background,
+    borderBottomColor: c.cardBorder,
+    backgroundColor: c.background,
   },
   backBtn: { paddingVertical: 6, paddingHorizontal: 4, minWidth: 64 },
-  backText: { fontSize: 15, fontWeight: "600", color: Colors.primary },
-  headerTitle: { fontSize: 17, fontWeight: "800", color: Colors.foreground },
+  backText: { fontSize: 15, fontWeight: "600", color: c.primary },
+  headerTitle: { fontSize: 17, fontWeight: "800", color: c.foreground },
   headerSpacer: { minWidth: 64 },
 
   centered: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12 },
-  loadingText: { fontSize: 15, color: Colors.mutedForeground },
+  loadingText: { fontSize: 15, color: c.mutedForeground },
 
   listContent: { paddingVertical: 8 },
 
   emptyContainer: { flexGrow: 1, justifyContent: "center", alignItems: "center" },
   emptyWrap: { alignItems: "center", paddingHorizontal: 40, gap: 10 },
   emptyEmoji: { fontSize: 52, marginBottom: 4 },
-  emptyTitle: { fontSize: 18, fontWeight: "800", color: Colors.foreground, textAlign: "center" },
-  emptyHint: { fontSize: 14, color: Colors.mutedForeground, textAlign: "center", lineHeight: 20 },
+  emptyTitle: { fontSize: 18, fontWeight: "800", color: c.foreground, textAlign: "center" },
+  emptyHint: { fontSize: 14, color: c.mutedForeground, textAlign: "center", lineHeight: 20 },
 
-  separator: { height: 1, backgroundColor: Colors.border, marginLeft: 76 },
+  separator: { height: 1, backgroundColor: c.border, marginLeft: 76 },
 
   row: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: Colors.background,
+    backgroundColor: c.background,
   },
   avatar: {
     width: 50,
@@ -226,8 +228,8 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 20, fontWeight: "800" },
   rowInfo: { flex: 1, gap: 4 },
   rowTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  buyerName: { fontSize: 16, fontWeight: "700", color: Colors.foreground, flex: 1, marginRight: 8 },
-  timestamp: { fontSize: 12, color: Colors.mutedForeground, fontWeight: "500" },
-  preview: { fontSize: 14, color: Colors.mutedForeground, lineHeight: 18 },
-  chevron: { fontSize: 22, color: Colors.mutedForeground, marginLeft: 8, fontWeight: "300" },
+  buyerName: { fontSize: 16, fontWeight: "700", color: c.foreground, flex: 1, marginRight: 8 },
+  timestamp: { fontSize: 12, color: c.mutedForeground, fontWeight: "500" },
+  preview: { fontSize: 14, color: c.mutedForeground, lineHeight: 18 },
+  chevron: { fontSize: 22, color: c.mutedForeground, marginLeft: 8, fontWeight: "300" },
 });

@@ -1,17 +1,19 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert, Switch,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/lib/auth";
-import { Colors } from "@/lib/constants";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 
 type Tab = "login" | "register";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function AuthScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [tab, setTab] = useState<Tab>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -111,7 +113,7 @@ export default function AuthScreen() {
                     returnKeyType="next"
                     blurOnSubmit={false}
                     onSubmitEditing={() => lastNameRef.current?.focus()}
-                    placeholderTextColor={Colors.mutedForeground}
+                    placeholderTextColor={colors.mutedForeground}
                   />
                 </View>
                 <View style={[styles.inputWrap, { flex: 1, marginLeft: 6 }]}>
@@ -126,7 +128,7 @@ export default function AuthScreen() {
                     returnKeyType="next"
                     blurOnSubmit={false}
                     onSubmitEditing={() => emailRef.current?.focus()}
-                    placeholderTextColor={Colors.mutedForeground}
+                    placeholderTextColor={colors.mutedForeground}
                   />
                 </View>
               </View>
@@ -146,7 +148,7 @@ export default function AuthScreen() {
                 returnKeyType="next"
                 blurOnSubmit={false}
                 onSubmitEditing={() => passwordRef.current?.focus()}
-                placeholderTextColor={Colors.mutedForeground}
+                placeholderTextColor={colors.mutedForeground}
               />
               {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
             </View>
@@ -163,7 +165,7 @@ export default function AuthScreen() {
                   secureTextEntry={!showPassword}
                   returnKeyType={tab === "login" ? "go" : "next"}
                   onSubmitEditing={handleSubmit}
-                  placeholderTextColor={Colors.mutedForeground}
+                  placeholderTextColor={colors.mutedForeground}
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword((v) => !v)}
@@ -200,7 +202,7 @@ export default function AuthScreen() {
                 <Switch
                   value={isAgent}
                   onValueChange={setIsAgent}
-                  trackColor={{ false: Colors.border, true: Colors.primary }}
+                  trackColor={{ false: colors.border, true: colors.primary }}
                   thumbColor="#fff"
                 />
               </View>
@@ -239,36 +241,36 @@ export default function AuthScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.surface },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.surface },
   scroll: { flexGrow: 1, justifyContent: "center", paddingHorizontal: 20, paddingVertical: 40 },
 
   hero: { alignItems: "center", marginBottom: 32 },
   logoBox: {
     width: 72,
     height: 72,
-    backgroundColor: Colors.primary,
+    backgroundColor: c.primary,
     borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 14,
-    shadowColor: Colors.shadowColor,
+    shadowColor: c.shadowColor,
     shadowOpacity: 0.25,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
     elevation: 8,
   },
   logoEmoji: { fontSize: 34 },
-  appName: { fontSize: 30, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 },
-  tagline: { fontSize: 15, color: Colors.mutedForeground, marginTop: 6, textAlign: "center" },
+  appName: { fontSize: 30, fontWeight: "800", color: c.foreground, letterSpacing: -0.5 },
+  tagline: { fontSize: 15, color: c.mutedForeground, marginTop: 6, textAlign: "center" },
 
   card: {
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderRadius: 20,
     padding: 24,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    shadowColor: Colors.shadowColor,
+    borderColor: c.cardBorder,
+    shadowColor: c.shadowColor,
     shadowOpacity: 0.08,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 6 },
@@ -277,7 +279,7 @@ const styles = StyleSheet.create({
 
   tabs: {
     flexDirection: "row",
-    backgroundColor: Colors.muted,
+    backgroundColor: c.muted,
     borderRadius: 12,
     padding: 4,
     marginBottom: 20,
@@ -289,37 +291,37 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   tabBtnActive: {
-    backgroundColor: Colors.background,
+    backgroundColor: c.background,
     shadowColor: "#000",
     shadowOpacity: 0.06,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
-  tabText: { color: Colors.mutedForeground, fontWeight: "600", fontSize: 15 },
-  tabTextActive: { color: Colors.foreground, fontWeight: "700" },
+  tabText: { color: c.mutedForeground, fontWeight: "600", fontSize: 15 },
+  tabTextActive: { color: c.foreground, fontWeight: "700" },
 
   form: { gap: 14 },
   row: { flexDirection: "row" },
   inputWrap: { gap: 5 },
-  label: { fontSize: 13, fontWeight: "600", color: Colors.foregroundSecondary },
+  label: { fontSize: 13, fontWeight: "600", color: c.foregroundSecondary },
   input: {
     borderWidth: 1.5,
-    borderColor: Colors.border,
+    borderColor: c.border,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 13,
     fontSize: 16,
-    color: Colors.foreground,
-    backgroundColor: Colors.background,
+    color: c.foreground,
+    backgroundColor: c.background,
   },
   passwordWrap: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1.5,
-    borderColor: Colors.border,
+    borderColor: c.border,
     borderRadius: 12,
-    backgroundColor: Colors.background,
+    backgroundColor: c.background,
     paddingRight: 4,
   },
   inputNoBorder: {
@@ -327,8 +329,8 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     borderRadius: 0,
   },
-  inputError: { borderColor: Colors.destructive },
-  errorText: { fontSize: 12, color: Colors.destructive, fontWeight: "600", marginTop: 4 },
+  inputError: { borderColor: c.destructive },
+  errorText: { fontSize: 12, color: c.destructive, fontWeight: "600", marginTop: 4 },
   eyeBtn: {
     minWidth: 44,
     minHeight: 44,
@@ -338,15 +340,15 @@ const styles = StyleSheet.create({
   },
   eyeIcon: { fontSize: 20 },
   forgotRow: { alignItems: "flex-end" },
-  forgotText: { fontSize: 13, color: Colors.primary, fontWeight: "600" },
+  forgotText: { fontSize: 13, color: c.primary, fontWeight: "600" },
 
   submitBtn: {
-    backgroundColor: Colors.primary,
+    backgroundColor: c.primary,
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: "center",
     marginTop: 4,
-    shadowColor: Colors.primary,
+    shadowColor: c.primary,
     shadowOpacity: 0.35,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -356,31 +358,31 @@ const styles = StyleSheet.create({
   submitBtnText: { color: "#fff", fontWeight: "800", fontSize: 16, letterSpacing: 0.3 },
 
   switchRow: { flexDirection: "row", justifyContent: "center", marginTop: 18 },
-  switchText: { fontSize: 14, color: Colors.mutedForeground },
-  switchLink: { fontSize: 14, color: Colors.primary, fontWeight: "700" },
+  switchText: { fontSize: 14, color: c.mutedForeground },
+  switchLink: { fontSize: 14, color: c.primary, fontWeight: "700" },
 
   agentToggleRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: Colors.muted,
+    backgroundColor: c.muted,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderWidth: 1.5,
-    borderColor: Colors.border,
+    borderColor: c.border,
   },
   agentToggleRowActive: {
-    backgroundColor: Colors.primaryLight,
-    borderColor: Colors.primary,
+    backgroundColor: c.primaryLight,
+    borderColor: c.primary,
   },
   agentToggleInfo: { flex: 1, marginRight: 12 },
-  agentToggleLabel: { fontSize: 14, fontWeight: "700", color: Colors.foreground },
-  agentToggleLabelActive: { color: Colors.primary },
-  agentToggleHint: { fontSize: 12, color: Colors.mutedForeground, marginTop: 2 },
+  agentToggleLabel: { fontSize: 14, fontWeight: "700", color: c.foreground },
+  agentToggleLabelActive: { color: c.primary },
+  agentToggleHint: { fontSize: 12, color: c.mutedForeground, marginTop: 2 },
   agentToggleDesc: {
     fontSize: 12,
-    color: Colors.primary,
+    color: c.primary,
     fontWeight: "600",
     marginTop: 6,
     lineHeight: 16,

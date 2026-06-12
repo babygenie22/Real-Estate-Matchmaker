@@ -1,9 +1,9 @@
-import React, { useRef } from "react";
+import React, { useMemo, useRef } from "react";
 import {
   View, Text, Image, StyleSheet, Dimensions,
   PanResponder, Animated,
 } from "react-native";
-import { Colors } from "@/lib/constants";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 import { VerifiedBadge, isVerified } from "@/components/VerifiedBadge";
 import { haptics } from "@/lib/haptics";
 
@@ -38,6 +38,8 @@ interface SwipeCardProps {
 }
 
 export default function SwipeCard({ agent, onLike, onPass, onPress, isTop }: SwipeCardProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const position = useRef(new Animated.ValueXY()).current;
   const lastTap = useRef<number>(0);
 
@@ -215,14 +217,14 @@ export default function SwipeCard({ agent, onLike, onPass, onPress, isTop }: Swi
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   card: {
     width: CARD_W,
     height: CARD_H,
     borderRadius: 24,
     overflow: "hidden",
-    backgroundColor: Colors.card,
-    shadowColor: Colors.shadowColor,
+    backgroundColor: c.card,
+    shadowColor: c.shadowColor,
     shadowOpacity: 0.18,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 8 },
@@ -251,10 +253,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 3.5,
   },
-  likeStamp: { left: 18, borderColor: "#22c55e", transform: [{ rotate: "-14deg" }], backgroundColor: "rgba(34,197,94,0.12)" },
-  passStamp: { right: 18, borderColor: "#ef4444", transform: [{ rotate: "14deg" }], backgroundColor: "rgba(239,68,68,0.12)" },
-  likeStampText: { color: "#22c55e", fontWeight: "900", fontSize: 22, letterSpacing: 1.5 },
-  passStampText: { color: "#ef4444", fontWeight: "900", fontSize: 22, letterSpacing: 1.5 },
+  // Dark translucent backing keeps the stamps legible on light photos.
+  likeStamp: { left: 18, borderColor: c.like, transform: [{ rotate: "-14deg" }], backgroundColor: "rgba(0,0,0,0.35)" },
+  passStamp: { right: 18, borderColor: c.pass, transform: [{ rotate: "14deg" }], backgroundColor: "rgba(0,0,0,0.35)" },
+  likeStampText: { color: c.like, fontWeight: "900", fontSize: 22, letterSpacing: 1.5, textShadowColor: "rgba(0,0,0,0.5)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
+  passStampText: { color: c.pass, fontWeight: "900", fontSize: 22, letterSpacing: 1.5, textShadowColor: "rgba(0,0,0,0.5)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
 
   infoOverlay: {
     position: "absolute",
@@ -266,11 +269,11 @@ const styles = StyleSheet.create({
   nameRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   name: { fontSize: 24, fontWeight: "800", color: "#fff", flex: 1, letterSpacing: -0.3 },
   expBadge: {
-    backgroundColor: Colors.primary,
+    backgroundColor: c.primary,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    shadowColor: Colors.primary,
+    shadowColor: c.primary,
     shadowOpacity: 0.4,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },

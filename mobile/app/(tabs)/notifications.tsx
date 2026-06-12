@@ -1,11 +1,11 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
   SafeAreaView, Alert, RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { api } from "@/lib/api";
-import { Colors } from "@/lib/constants";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 import { SkeletonRow } from "@/components/Skeleton";
 import { haptics } from "@/lib/haptics";
 
@@ -26,11 +26,11 @@ function typeEmoji(type: string) {
   return "🔔";
 }
 
-function typeBg(type: string) {
-  if (type === "match") return "#dcfce7";
-  if (type === "message") return "#dbeafe";
-  if (type === "booking") return "#fef3c7";
-  return Colors.muted;
+function typeBg(type: string, c: ThemeColors) {
+  if (type === "match") return c.successLight;
+  if (type === "message") return c.primaryLight;
+  if (type === "booking") return c.warningLight;
+  return c.muted;
 }
 
 function timeAgo(iso: string) {
@@ -44,6 +44,8 @@ function timeAgo(iso: string) {
 }
 
 export default function NotificationsScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -156,7 +158,7 @@ export default function NotificationsScreen() {
           keyExtractor={(n) => n.id}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
           }
           renderItem={({ item }) => (
             <TouchableOpacity
@@ -164,7 +166,7 @@ export default function NotificationsScreen() {
               onPress={() => onNotificationPress(item)}
               activeOpacity={0.7}
             >
-              <View style={[styles.iconCircle, { backgroundColor: typeBg(item.type) }]}>
+              <View style={[styles.iconCircle, { backgroundColor: typeBg(item.type, colors) }]}>
                 <Text style={styles.iconEmoji}>{typeEmoji(item.type)}</Text>
               </View>
               <View style={styles.content}>
@@ -186,8 +188,8 @@ export default function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   skeletonList: { paddingHorizontal: 4, paddingTop: 8 },
   header: {
@@ -198,26 +200,31 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.cardBorder,
+    borderBottomColor: c.cardBorder,
   },
-  title: { fontSize: 24, fontWeight: "800", color: Colors.foreground },
-  subtitle: { fontSize: 13, color: Colors.mutedForeground, marginTop: 2 },
+  title: { fontSize: 24, fontWeight: "800", color: c.foreground },
+  subtitle: { fontSize: 13, color: c.mutedForeground, marginTop: 2 },
   markAllBtn: {
     paddingHorizontal: 12,
     paddingVertical: 7,
-    backgroundColor: Colors.muted,
+    backgroundColor: c.muted,
     borderRadius: 8,
   },
-  markAllText: { fontSize: 12, fontWeight: "700", color: Colors.mutedForeground },
+  markAllText: { fontSize: 12, fontWeight: "700", color: c.mutedForeground },
   item: {
     flexDirection: "row",
     alignItems: "flex-start",
     paddingHorizontal: 20,
     paddingVertical: 14,
     gap: 14,
-    backgroundColor: Colors.background,
+    backgroundColor: c.background,
   },
-  itemUnread: { backgroundColor: "#f0f6ff" },
+  itemUnread: {
+    backgroundColor: c.primaryLight + "66",
+    borderLeftWidth: 3,
+    borderLeftColor: c.primary,
+    paddingHorizontal: 17,
+  },
   iconCircle: {
     width: 44,
     height: 44,
@@ -229,14 +236,14 @@ const styles = StyleSheet.create({
   iconEmoji: { fontSize: 20 },
   content: { flex: 1 },
   contentHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 2 },
-  itemTitle: { fontSize: 14, fontWeight: "600", color: Colors.foregroundSecondary, flex: 1 },
-  itemTitleUnread: { color: Colors.foreground, fontWeight: "700" },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary, marginLeft: 6, flexShrink: 0 },
-  itemBody: { fontSize: 13, color: Colors.mutedForeground, lineHeight: 18 },
-  itemTime: { fontSize: 11, color: Colors.mutedForeground, marginTop: 4, opacity: 0.7 },
-  separator: { height: 1, backgroundColor: Colors.cardBorder, marginLeft: 78 },
+  itemTitle: { fontSize: 14, fontWeight: "600", color: c.foregroundSecondary, flex: 1 },
+  itemTitleUnread: { color: c.foreground, fontWeight: "700" },
+  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: c.primary, marginLeft: 6, flexShrink: 0 },
+  itemBody: { fontSize: 13, color: c.mutedForeground, lineHeight: 18 },
+  itemTime: { fontSize: 11, color: c.mutedForeground, marginTop: 4, opacity: 0.7 },
+  separator: { height: 1, backgroundColor: c.cardBorder, marginLeft: 78 },
   empty: { flex: 1, justifyContent: "center", alignItems: "center", padding: 32, gap: 12 },
   emptyEmoji: { fontSize: 56 },
-  emptyTitle: { fontSize: 20, fontWeight: "700", color: Colors.foreground },
-  emptySub: { fontSize: 14, color: Colors.mutedForeground, textAlign: "center", lineHeight: 20 },
+  emptyTitle: { fontSize: 20, fontWeight: "700", color: c.foreground },
+  emptySub: { fontSize: 14, color: c.mutedForeground, textAlign: "center", lineHeight: 20 },
 });

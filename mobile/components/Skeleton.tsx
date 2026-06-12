@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Animated, StyleSheet, View, ViewStyle, DimensionValue } from "react-native";
-import { Colors } from "@/lib/constants";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 
 /**
  * Shimmering skeleton placeholder. Use while async content loads —
@@ -17,6 +17,7 @@ export function Skeleton({
   radius?: number;
   style?: ViewStyle;
 }) {
+  const { colors } = useTheme();
   const shimmer = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -35,7 +36,7 @@ export function Skeleton({
   return (
     <Animated.View
       style={[
-        { width, height, borderRadius: radius, backgroundColor: Colors.muted, opacity },
+        { width, height, borderRadius: radius, backgroundColor: colors.muted, opacity },
         style,
       ]}
     />
@@ -44,6 +45,8 @@ export function Skeleton({
 
 /** A skeleton shaped like an agent swipe card. */
 export function SkeletonCard({ width, height }: { width: number; height: number }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={[styles.card, { width, height }]}>
       <Skeleton width="100%" height={height * 0.62} radius={0} />
@@ -62,6 +65,8 @@ export function SkeletonCard({ width, height }: { width: number; height: number 
 
 /** A skeleton shaped like a list row (avatar + two lines). */
 export function SkeletonRow() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.row}>
       <Skeleton width={56} height={56} radius={28} />
@@ -73,13 +78,13 @@ export function SkeletonRow() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   card: {
     borderRadius: 24,
     overflow: "hidden",
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: c.cardBorder,
   },
   cardBody: { padding: 18, gap: 4 },
   cardChips: { flexDirection: "row", gap: 8, marginTop: 16 },

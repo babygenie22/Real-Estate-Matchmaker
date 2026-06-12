@@ -1,5 +1,6 @@
+import { useMemo } from "react";
 import { TouchableOpacity, View, Text, StyleSheet } from "react-native";
-import { Colors } from "@/lib/constants";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 
 interface Props {
   icon: string;
@@ -11,6 +12,8 @@ interface Props {
 }
 
 export function SettingsRow({ icon, label, value, onPress, danger = false, showArrow = true }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <TouchableOpacity
       style={styles.row}
@@ -34,14 +37,15 @@ export function SettingsRow({ icon, label, value, onPress, danger = false, showA
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 14,
     paddingHorizontal: 20,
-    backgroundColor: Colors.card,
+    minHeight: 52,
+    backgroundColor: c.card,
   },
   left: {
     flexDirection: "row",
@@ -54,11 +58,11 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    color: Colors.foreground,
+    color: c.foreground,
     fontWeight: "400",
   },
   dangerText: {
-    color: Colors.destructive,
+    color: c.destructive,
   },
   right: {
     flexDirection: "row",
@@ -67,12 +71,12 @@ const styles = StyleSheet.create({
   },
   value: {
     fontSize: 15,
-    color: Colors.mutedForeground,
+    color: c.mutedForeground,
     marginRight: 4,
   },
   arrow: {
     fontSize: 20,
-    color: Colors.mutedForeground,
+    color: c.mutedForeground,
     lineHeight: 22,
   },
 });

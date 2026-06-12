@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   View, Text, StyleSheet, SafeAreaView, TouchableOpacity,
   ScrollView, Image, Alert, ActivityIndicator,
@@ -6,7 +6,7 @@ import {
 import { useRouter } from "expo-router";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
-import { Colors } from "@/lib/constants";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 
 interface Booking {
   id: string;
@@ -35,15 +35,15 @@ function isUpcoming(booking: Booking): boolean {
   return bookingDate >= today;
 }
 
-function StatusChip({ status }: { status: string }) {
+function StatusChip({ status, colors }: { status: string; colors: ThemeColors }) {
   const s = status.toLowerCase();
   const config = s === "confirmed"
-    ? { bg: Colors.successLight, color: Colors.success, label: "Confirmed" }
+    ? { bg: colors.successLight, color: colors.success, label: "Confirmed" }
     : s === "declined"
-    ? { bg: Colors.destructiveLight, color: Colors.destructive, label: "Declined" }
+    ? { bg: colors.destructiveLight, color: colors.destructive, label: "Declined" }
     : s === "completed"
-    ? { bg: Colors.muted, color: Colors.mutedForeground, label: "Completed" }
-    : { bg: Colors.warningLight, color: Colors.warning, label: "Pending" };
+    ? { bg: colors.muted, color: colors.mutedForeground, label: "Completed" }
+    : { bg: colors.warningLight, color: colors.warning, label: "Pending" };
 
   return (
     <View style={[chipStyles.badge, { backgroundColor: config.bg }]}>
@@ -57,7 +57,17 @@ const chipStyles = StyleSheet.create({
   text: { fontSize: 11, fontWeight: "700" },
 });
 
-function BookingCard({ booking, onLeaveReview }: { booking: Booking; onLeaveReview?: () => void }) {
+function BookingCard({
+  booking,
+  onLeaveReview,
+  styles,
+  colors,
+}: {
+  booking: Booking;
+  onLeaveReview?: () => void;
+  styles: ReturnType<typeof makeStyles>;
+  colors: ThemeColors;
+}) {
   const photoUri =
     booking.agent.photo ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(booking.agent.name)}&size=60&background=dbeafe&color=2563eb`;
@@ -69,7 +79,7 @@ function BookingCard({ booking, onLeaveReview }: { booking: Booking; onLeaveRevi
       <View style={styles.bookingInfo}>
         <Text style={styles.bookingAgent}>{booking.agent.name}</Text>
         <Text style={styles.bookingDate}>📅 {booking.proposedDate} at {booking.proposedTime}</Text>
-        <StatusChip status={booking.status} />
+        <StatusChip status={booking.status} colors={colors} />
         {showReviewBtn && (
           <TouchableOpacity
             style={styles.reviewBtn}
@@ -85,6 +95,8 @@ function BookingCard({ booking, onLeaveReview }: { booking: Booking; onLeaveRevi
 }
 
 export default function ProfileScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user, logout } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(true);
@@ -165,7 +177,7 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Consultation Requests</Text>
           {loadingBookings ? (
-            <ActivityIndicator color={Colors.primary} style={{ marginTop: 12 }} />
+            <ActivityIndicator color={colors.primary} style={{ marginTop: 12 }} />
           ) : bookings.length === 0 ? (
             <Text style={styles.emptyBooking}>No bookings yet. Match with an agent and tap "Book"!</Text>
           ) : (
@@ -174,7 +186,7 @@ export default function ProfileScreen() {
                 <View style={styles.bookingGroup}>
                   <Text style={styles.groupLabel}>Upcoming</Text>
                   {upcomingBookings.map((b) => (
-                    <BookingCard key={b.id} booking={b} />
+                    <BookingCard key={b.id} booking={b} styles={styles} colors={colors} />
                   ))}
                 </View>
               )}
@@ -185,6 +197,8 @@ export default function ProfileScreen() {
                     <BookingCard
                       key={b.id}
                       booking={b}
+                      styles={styles}
+                      colors={colors}
                       onLeaveReview={
                         b.status.toLowerCase() === "confirmed"
                           ? () => router.push({
@@ -257,7 +271,7 @@ export default function ProfileScreen() {
               onPress={() => router.replace("/(agent-portal)/dashboard")}
               activeOpacity={0.7}
             >
-              <View style={[styles.toolIconWrap, { backgroundColor: "#dbeafe" }]}>
+              <View style={[styles.toolIconWrap, { backgroundColor: colors.primaryLight }]}>
                 <Text style={styles.toolIcon}>🏠</Text>
               </View>
               <View style={styles.toolInfo}>
@@ -289,62 +303,62 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  header: { alignItems: "center", paddingVertical: 32, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  avatar: { width: 88, height: 88, borderRadius: 44, backgroundColor: Colors.primaryLight, justifyContent: "center", alignItems: "center", marginBottom: 12 },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
+  header: { alignItems: "center", paddingVertical: 32, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: c.border },
+  avatar: { width: 88, height: 88, borderRadius: 44, backgroundColor: c.primaryLight, justifyContent: "center", alignItems: "center", marginBottom: 12 },
   avatarImg: { width: 88, height: 88, borderRadius: 44 },
-  avatarText: { fontSize: 32, fontWeight: "700", color: Colors.primary },
-  name: { fontSize: 22, fontWeight: "800", color: Colors.foreground, marginBottom: 4 },
-  email: { fontSize: 14, color: Colors.mutedForeground, marginBottom: 8 },
-  roleBadge: { backgroundColor: Colors.muted, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 4 },
-  roleText: { fontSize: 12, color: Colors.mutedForeground, fontWeight: "600", textTransform: "capitalize" },
-  section: { padding: 20, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  avatarText: { fontSize: 32, fontWeight: "700", color: c.primary },
+  name: { fontSize: 22, fontWeight: "800", color: c.foreground, marginBottom: 4 },
+  email: { fontSize: 14, color: c.mutedForeground, marginBottom: 8 },
+  roleBadge: { backgroundColor: c.muted, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 4 },
+  roleText: { fontSize: 12, color: c.mutedForeground, fontWeight: "600", textTransform: "capitalize" },
+  section: { padding: 20, borderBottomWidth: 1, borderBottomColor: c.border },
   sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
-  sectionTitle: { fontSize: 14, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5 },
-  editPrefBtn: { backgroundColor: Colors.primaryLight, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
-  editPrefText: { fontSize: 13, fontWeight: "600", color: Colors.primary },
-  prefRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.muted },
-  prefLabel: { fontSize: 15, color: Colors.mutedForeground },
-  prefValue: { fontSize: 15, fontWeight: "600", color: Colors.foreground, flexShrink: 1, textAlign: "right", maxWidth: "55%" },
-  emptyBooking: { color: Colors.mutedForeground, fontSize: 14, lineHeight: 20 },
+  sectionTitle: { fontSize: 14, fontWeight: "700", color: c.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5 },
+  editPrefBtn: { backgroundColor: c.primaryLight, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
+  editPrefText: { fontSize: 13, fontWeight: "600", color: c.primary },
+  prefRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.muted },
+  prefLabel: { fontSize: 15, color: c.mutedForeground },
+  prefValue: { fontSize: 15, fontWeight: "600", color: c.foreground, flexShrink: 1, textAlign: "right", maxWidth: "55%" },
+  emptyBooking: { color: c.mutedForeground, fontSize: 14, lineHeight: 20 },
   bookingGroup: { marginTop: 12 },
-  groupLabel: { fontSize: 12, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 },
-  bookingCard: { flexDirection: "row", alignItems: "flex-start", gap: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.muted },
+  groupLabel: { fontSize: 12, fontWeight: "700", color: c.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 },
+  bookingCard: { flexDirection: "row", alignItems: "flex-start", gap: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: c.muted },
   bookingAvatar: { width: 48, height: 48, borderRadius: 24, marginTop: 2 },
   bookingInfo: { flex: 1, gap: 3 },
-  bookingAgent: { fontSize: 15, fontWeight: "700", color: Colors.foreground },
-  bookingDate: { fontSize: 13, color: Colors.mutedForeground },
+  bookingAgent: { fontSize: 15, fontWeight: "700", color: c.foreground },
+  bookingDate: { fontSize: 13, color: c.mutedForeground },
   reviewBtn: {
     alignSelf: "flex-start",
     marginTop: 8,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: c.primaryLight,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderWidth: 1,
-    borderColor: Colors.primary,
+    borderColor: c.primary,
   },
-  reviewBtnText: { fontSize: 12, fontWeight: "700", color: Colors.primary },
+  reviewBtnText: { fontSize: 12, fontWeight: "700", color: c.primary },
   becomeAgentBtn: {
     marginHorizontal: 20,
     marginTop: 20,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: c.primaryLight,
     borderWidth: 1.5,
-    borderColor: Colors.primary,
+    borderColor: c.primary,
   },
-  becomeAgentText: { color: Colors.primary, fontWeight: "700", fontSize: 16 },
-  signOutBtn: { margin: 20, marginTop: 12, borderRadius: 12, paddingVertical: 16, alignItems: "center", backgroundColor: "#fee2e2" },
-  signOutText: { color: Colors.destructive, fontWeight: "700", fontSize: 16 },
-  toolRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.muted },
+  becomeAgentText: { color: c.primary, fontWeight: "700", fontSize: 16 },
+  signOutBtn: { margin: 20, marginTop: 12, borderRadius: 12, paddingVertical: 16, alignItems: "center", backgroundColor: c.destructiveLight },
+  signOutText: { color: c.destructive, fontWeight: "700", fontSize: 16 },
+  toolRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.muted },
   agentToolRow: { borderBottomWidth: 0 },
-  toolIconWrap: { width: 40, height: 40, borderRadius: 10, backgroundColor: Colors.surface, alignItems: "center", justifyContent: "center" },
+  toolIconWrap: { width: 40, height: 40, borderRadius: 10, backgroundColor: c.surface, alignItems: "center", justifyContent: "center" },
   toolIcon: { fontSize: 20 },
   toolInfo: { flex: 1 },
-  toolLabel: { fontSize: 15, fontWeight: "600", color: Colors.foreground },
-  toolSub: { fontSize: 12, color: Colors.mutedForeground, marginTop: 1 },
-  toolChevron: { fontSize: 22, color: Colors.muted, fontWeight: "300" },
+  toolLabel: { fontSize: 15, fontWeight: "600", color: c.foreground },
+  toolSub: { fontSize: 12, color: c.mutedForeground, marginTop: 1 },
+  toolChevron: { fontSize: 22, color: c.muted, fontWeight: "300" },
 });

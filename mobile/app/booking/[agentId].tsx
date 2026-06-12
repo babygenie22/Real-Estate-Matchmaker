@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   View, Text, StyleSheet, SafeAreaView, ScrollView,
   TouchableOpacity, TextInput, Alert, ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { api } from "@/lib/api";
-import { Colors } from "@/lib/constants";
+import { Skeleton } from "@/components/Skeleton";
+import { haptics } from "@/lib/haptics";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 
 const TIMES = ["9:00 AM", "10:00 AM", "11:00 AM", "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM"];
 
@@ -24,7 +26,10 @@ function getDates() {
 
 export default function BookingScreen() {
   const { agentId } = useLocalSearchParams<{ agentId: string }>();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [agent, setAgent] = useState<{ id: string; name: string } | null>(null);
+  const [agentError, setAgentError] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [notes, setNotes] = useState("");
@@ -35,7 +40,7 @@ export default function BookingScreen() {
   useEffect(() => {
     api.get<{ id: string; name: string }>(`/api/agents/${agentId}`)
       .then(setAgent)
-      .catch(() => {});
+      .catch(() => setAgentError(true));
   }, [agentId]);
 
   async function submit() {
@@ -64,10 +69,22 @@ export default function BookingScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {agent && (
+        {agent ? (
           <View style={styles.agentInfo}>
             <Text style={styles.agentLabel}>Booking consultation with</Text>
             <Text style={styles.agentName}>{agent.name}</Text>
+          </View>
+        ) : agentError ? (
+          <View style={styles.agentInfoError}>
+            <Text style={styles.agentErrorText}>Couldn't load agent details.</Text>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Text style={styles.agentErrorLink}>Go back and try again</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.agentInfo}>
+            <Skeleton width={160} height={12} />
+            <Skeleton width={220} height={22} style={{ marginTop: 8 }} />
           </View>
         )}
 
@@ -78,7 +95,7 @@ export default function BookingScreen() {
             <TouchableOpacity
               key={d.value}
               style={[styles.dateChip, selectedDate === d.value && styles.dateChipSelected]}
-              onPress={() => setSelectedDate(d.value)}
+              onPress={() => { haptics.selection(); setSelectedDate(d.value); }}
             >
               <Text style={[styles.dateText, selectedDate === d.value && styles.dateTextSelected]}>{d.label}</Text>
             </TouchableOpacity>
@@ -92,7 +109,7 @@ export default function BookingScreen() {
             <TouchableOpacity
               key={t}
               style={[styles.timeChip, selectedTime === t && styles.timeChipSelected]}
-              onPress={() => setSelectedTime(t)}
+              onPress={() => { haptics.selection(); setSelectedTime(t); }}
             >
               <Text style={[styles.timeText, selectedTime === t && styles.timeTextSelected]}>{t}</Text>
             </TouchableOpacity>
@@ -106,7 +123,7 @@ export default function BookingScreen() {
           value={notes}
           onChangeText={setNotes}
           placeholder="What would you like to discuss? E.g. budget, neighborhoods, timeline..."
-          placeholderTextColor={Colors.mutedForeground}
+          placeholderTextColor={colors.mutedForeground}
           multiline
           numberOfLines={4}
           textAlignVertical="top"
@@ -124,6 +141,15 @@ export default function BookingScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
+        {(!selectedDate || !selectedTime) && (
+          <Text style={styles.footerHint}>
+            {!selectedDate && !selectedTime
+              ? "Select a date and time to continue"
+              : !selectedDate
+                ? "Select a date to continue"
+                : "Select a time to continue"}
+          </Text>
+        )}
         <TouchableOpacity
           style={[styles.submitBtn, (!selectedDate || !selectedTime || loading) && styles.submitBtnDisabled]}
           onPress={submit}
@@ -136,30 +162,34 @@ export default function BookingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
   scroll: { padding: 20, paddingBottom: 0 },
-  agentInfo: { backgroundColor: Colors.primaryLight, borderRadius: 12, padding: 16, marginBottom: 24 },
-  agentLabel: { fontSize: 12, color: Colors.primary, fontWeight: "600", textTransform: "uppercase" },
-  agentName: { fontSize: 20, fontWeight: "800", color: Colors.foreground, marginTop: 4 },
-  sectionTitle: { fontSize: 13, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 },
+  agentInfo: { backgroundColor: c.primaryLight, borderRadius: 12, padding: 16, marginBottom: 24 },
+  agentInfoError: { backgroundColor: c.destructiveLight, borderRadius: 12, padding: 16, marginBottom: 24, gap: 6 },
+  agentErrorText: { fontSize: 14, fontWeight: "600", color: c.destructive },
+  agentErrorLink: { fontSize: 14, fontWeight: "700", color: c.primary },
+  footerHint: { fontSize: 12, color: c.mutedForeground, textAlign: "center", marginBottom: 8 },
+  agentLabel: { fontSize: 12, color: c.primary, fontWeight: "600", textTransform: "uppercase" },
+  agentName: { fontSize: 20, fontWeight: "800", color: c.foreground, marginTop: 4 },
+  sectionTitle: { fontSize: 13, fontWeight: "700", color: c.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 },
   dateRow: { marginHorizontal: -20, paddingHorizontal: 20 },
   dateContent: { gap: 10, paddingRight: 20 },
-  dateChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.background },
-  dateChipSelected: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
-  dateText: { color: Colors.foreground, fontWeight: "600", fontSize: 13 },
-  dateTextSelected: { color: Colors.primary },
+  dateChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, borderWidth: 1.5, borderColor: c.border, backgroundColor: c.background },
+  dateChipSelected: { borderColor: c.primary, backgroundColor: c.primaryLight },
+  dateText: { color: c.foreground, fontWeight: "600", fontSize: 13 },
+  dateTextSelected: { color: c.primary },
   timeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  timeChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.background, minWidth: "22%" },
-  timeChipSelected: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
-  timeText: { color: Colors.foreground, fontWeight: "600", fontSize: 14, textAlign: "center" },
-  timeTextSelected: { color: Colors.primary },
-  notesInput: { borderWidth: 1, borderColor: Colors.border, borderRadius: 12, padding: 14, fontSize: 15, color: Colors.foreground, minHeight: 100, marginTop: 4 },
-  summary: { backgroundColor: Colors.muted, borderRadius: 12, padding: 16, marginTop: 24, gap: 6 },
-  summaryTitle: { fontSize: 14, fontWeight: "700", color: Colors.foreground, marginBottom: 4 },
-  summaryText: { fontSize: 14, color: Colors.foreground },
-  footer: { padding: 16, borderTopWidth: 1, borderTopColor: Colors.border },
-  submitBtn: { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 16, alignItems: "center" },
+  timeChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, borderWidth: 1.5, borderColor: c.border, backgroundColor: c.background, minWidth: "22%" },
+  timeChipSelected: { borderColor: c.primary, backgroundColor: c.primaryLight },
+  timeText: { color: c.foreground, fontWeight: "600", fontSize: 14, textAlign: "center" },
+  timeTextSelected: { color: c.primary },
+  notesInput: { borderWidth: 1, borderColor: c.border, borderRadius: 12, padding: 14, fontSize: 15, color: c.foreground, minHeight: 100, marginTop: 4 },
+  summary: { backgroundColor: c.muted, borderRadius: 12, padding: 16, marginTop: 24, gap: 6, borderLeftWidth: 3, borderLeftColor: c.primary },
+  summaryTitle: { fontSize: 14, fontWeight: "700", color: c.foreground, marginBottom: 4 },
+  summaryText: { fontSize: 14, color: c.foreground },
+  footer: { padding: 16, borderTopWidth: 1, borderTopColor: c.border },
+  submitBtn: { backgroundColor: c.primary, borderRadius: 14, paddingVertical: 16, alignItems: "center" },
   submitBtnDisabled: { opacity: 0.4 },
   submitText: { color: "#fff", fontWeight: "700", fontSize: 17 },
 });

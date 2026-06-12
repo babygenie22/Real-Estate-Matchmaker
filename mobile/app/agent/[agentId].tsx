@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   View, Text, Image, StyleSheet, ScrollView, TouchableOpacity,
   SafeAreaView, Alert,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { api } from "@/lib/api";
-import { Colors } from "@/lib/constants";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 import { VerifiedBadge, isVerified } from "@/components/VerifiedBadge";
 import { Skeleton } from "@/components/Skeleton";
 import { useFavorites } from "@/lib/favorites";
@@ -51,6 +51,8 @@ function formatPrice(n: number) {
 }
 
 export default function AgentDetailScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { agentId } = useLocalSearchParams<{ agentId: string }>();
   const [agent, setAgent] = useState<Agent | null>(null);
   const [reviews, setReviews] = useState<any[]>([]);
@@ -251,8 +253,8 @@ export default function AgentDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   skeletonStatsRow: { flexDirection: "row", gap: 8, marginTop: 16, marginBottom: 4 },
   hero: { position: "relative", height: 340 },
@@ -262,42 +264,44 @@ const styles = StyleSheet.create({
   closeBtn: { position: "absolute", top: 16, right: 16, width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
   closeBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
   saveBtn: { position: "absolute", top: 16, right: 60, width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
-  saveBtnActive: { backgroundColor: Colors.primary },
+  saveBtnActive: { backgroundColor: c.primary },
   saveBtnText: { color: "#fff", fontSize: 18, fontWeight: "700" },
   heroInfo: { position: "absolute", bottom: 0, left: 0, right: 0, padding: 20 },
   heroNameRow: { flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" },
   heroName: { fontSize: 24, fontWeight: "800", color: "#fff", textShadowColor: "rgba(0,0,0,0.55)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
   heroRating: { fontSize: 14, color: "rgba(255,255,255,0.92)", marginTop: 4, textShadowColor: "rgba(0,0,0,0.55)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
   body: { padding: 20 },
-  statsRow: { flexDirection: "row", borderRadius: 14, backgroundColor: Colors.muted, padding: 16, marginBottom: 20, gap: 4 },
-  statBox: { flex: 1, alignItems: "center" },
-  statValue: { fontSize: 20, fontWeight: "800", color: Colors.foreground },
-  statLabel: { fontSize: 10, color: Colors.mutedForeground, marginTop: 3, textAlign: "center" },
+  // flexBasis 23% keeps one row on regular phones but wraps to a 2x2 grid on
+  // narrow screens (iPhone SE) instead of truncating the labels.
+  statsRow: { flexDirection: "row", flexWrap: "wrap", borderRadius: 14, backgroundColor: c.muted, padding: 16, marginBottom: 20, gap: 8 },
+  statBox: { flexBasis: "23%", flexGrow: 1, alignItems: "center" },
+  statValue: { fontSize: 20, fontWeight: "800", color: c.foreground },
+  statLabel: { fontSize: 10, color: c.mutedForeground, marginTop: 3, textAlign: "center" },
   section: { marginBottom: 20 },
-  sectionTitle: { fontSize: 12, fontWeight: "700", color: Colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 },
-  bio: { fontSize: 15, color: Colors.foreground, lineHeight: 22 },
-  detail: { fontSize: 15, color: Colors.foreground, lineHeight: 22 },
+  sectionTitle: { fontSize: 12, fontWeight: "700", color: c.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 },
+  bio: { fontSize: 15, color: c.foreground, lineHeight: 22 },
+  detail: { fontSize: 15, color: c.foreground, lineHeight: 22 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { backgroundColor: Colors.primaryLight, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 5 },
-  chipText: { color: Colors.primary, fontWeight: "600", fontSize: 13 },
-  chipAlt: { backgroundColor: Colors.muted },
-  chipTextAlt: { color: Colors.foreground, fontWeight: "600", fontSize: 13 },
-  reviewsTitle: { fontSize: 18, fontWeight: "800", color: Colors.foreground, marginBottom: 12 },
+  chip: { backgroundColor: c.primaryLight, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 5 },
+  chipText: { color: c.primary, fontWeight: "600", fontSize: 13 },
+  chipAlt: { backgroundColor: c.muted },
+  chipTextAlt: { color: c.foreground, fontWeight: "600", fontSize: 13 },
+  reviewsTitle: { fontSize: 18, fontWeight: "800", color: c.foreground, marginBottom: 12 },
   reviewsList: { gap: 12 },
   reviewCard: {
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: c.cardBorder,
     borderRadius: 14,
     padding: 14,
   },
   reviewHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   reviewStars: { fontSize: 13 },
-  reviewDate: { fontSize: 12, color: Colors.mutedForeground },
-  reviewText: { fontSize: 14, color: Colors.foreground, lineHeight: 20, marginTop: 8 },
-  reviewAuthor: { fontSize: 12, fontWeight: "700", color: Colors.mutedForeground, marginTop: 8 },
-  license: { fontSize: 12, color: Colors.mutedForeground, marginTop: 8 },
-  footer: { padding: 16, borderTopWidth: 1, borderTopColor: Colors.border },
-  bookBtn: { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 16, alignItems: "center" },
+  reviewDate: { fontSize: 12, color: c.mutedForeground },
+  reviewText: { fontSize: 14, color: c.foreground, lineHeight: 20, marginTop: 8 },
+  reviewAuthor: { fontSize: 12, fontWeight: "700", color: c.mutedForeground, marginTop: 8 },
+  license: { fontSize: 12, color: c.mutedForeground, marginTop: 8 },
+  footer: { padding: 16, borderTopWidth: 1, borderTopColor: c.border },
+  bookBtn: { backgroundColor: c.primary, borderRadius: 14, paddingVertical: 16, alignItems: "center" },
   bookBtnText: { color: "#fff", fontWeight: "700", fontSize: 17 },
 });

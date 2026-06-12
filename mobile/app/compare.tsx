@@ -1,8 +1,9 @@
+import { useMemo } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity, Image, StyleSheet,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { Colors } from "@/lib/constants";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 import { VerifiedBadge, isVerified } from "@/components/VerifiedBadge";
 import { useFavorites, FavoriteAgent } from "@/lib/favorites";
 import { haptics } from "@/lib/haptics";
@@ -82,6 +83,8 @@ export default function CompareScreen() {
   const idList = (ids ?? "").split(",").filter(Boolean);
   const { favorites } = useFavorites();
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const agents = idList
     .map((id) => favorites.find((a) => a.id === id))
@@ -182,11 +185,11 @@ export default function CompareScreen() {
 const HEADER_HEIGHT = 130;
 const FOOTER_HEIGHT = 56;
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  centered: { flex: 1, justifyContent: "center", alignItems: "center", padding: 32, gap: 12, backgroundColor: Colors.background },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
+  centered: { flex: 1, justifyContent: "center", alignItems: "center", padding: 32, gap: 12, backgroundColor: c.background },
   emptyEmoji: { fontSize: 56 },
-  emptyTitle: { fontSize: 18, fontWeight: "700", color: Colors.foreground, textAlign: "center" },
+  emptyTitle: { fontSize: 18, fontWeight: "700", color: c.foreground, textAlign: "center" },
   row: { flexDirection: "row", paddingVertical: 16 },
 
   labelCol: {
@@ -201,18 +204,18 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   labelEmoji: { fontSize: 14 },
-  labelText: { fontSize: 12, fontWeight: "700", color: Colors.foregroundSecondary },
+  labelText: { fontSize: 12, fontWeight: "700", color: c.foregroundSecondary },
   footerSpacer: { height: FOOTER_HEIGHT },
 
   colsRow: { gap: 12, paddingRight: 16 },
   agentCol: {
     width: COL_WIDTH,
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: c.cardBorder,
     overflow: "hidden",
-    shadowColor: Colors.shadowColor,
+    shadowColor: c.shadowColor,
     shadowOpacity: 0.06,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -225,22 +228,22 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 10,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.cardBorder,
+    borderBottomColor: c.cardBorder,
   },
-  avatar: { width: 70, height: 70, borderRadius: 35, borderWidth: 2, borderColor: Colors.primaryLight },
+  avatar: { width: 70, height: 70, borderRadius: 35, borderWidth: 2, borderColor: c.primaryLight },
   headerNameRow: { flexDirection: "row", alignItems: "center", maxWidth: "100%" },
-  colName: { fontSize: 15, fontWeight: "800", color: Colors.foreground },
+  colName: { fontSize: 15, fontWeight: "800", color: c.foreground },
   metricCell: {
     height: ROW_HEIGHT,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.muted,
+    borderBottomColor: c.muted,
   },
-  metricCellWin: { backgroundColor: Colors.successLight },
-  metricText: { fontSize: 14, fontWeight: "600", color: Colors.foreground, textAlign: "center" },
-  metricTextWin: { color: Colors.success, fontWeight: "800" },
+  metricCellWin: { backgroundColor: c.successLight },
+  metricText: { fontSize: 14, fontWeight: "600", color: c.foreground, textAlign: "center" },
+  metricTextWin: { color: c.success, fontWeight: "800" },
   footer: {
     height: FOOTER_HEIGHT,
     alignItems: "center",
@@ -249,7 +252,7 @@ const styles = StyleSheet.create({
   },
   viewBtn: {
     width: "100%",
-    backgroundColor: Colors.primary,
+    backgroundColor: c.primary,
     borderRadius: 12,
     paddingVertical: 9,
     alignItems: "center",

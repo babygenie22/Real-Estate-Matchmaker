@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, SafeAreaView, ActivityIndicator, Alert, Image,
@@ -7,7 +7,8 @@ import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { io, Socket } from "socket.io-client";
 import { useAuth } from "@/lib/auth";
 import { api, getToken } from "@/lib/api";
-import { API_URL, Colors, HIT_SLOP } from "@/lib/constants";
+import { API_URL, HIT_SLOP } from "@/lib/constants";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 
 interface Message {
   id: string;
@@ -26,20 +27,29 @@ interface Match {
 export default function ChatScreen() {
   const { matchId } = useLocalSearchParams<{ matchId: string }>();
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const navigation = useNavigation();
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
+  const [agentTyping, setAgentTyping] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const flatListRef = useRef<FlatList>(null);
+  const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingHideTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     loadMatch();
     loadMessages();
     setupSocket();
-    return () => { socketRef.current?.disconnect(); };
+    return () => {
+      socketRef.current?.disconnect();
+      if (typingTimeout.current) clearTimeout(typingTimeout.current);
+      if (typingHideTimeout.current) clearTimeout(typingHideTimeout.current);
+    };
   }, [matchId]);
 
   async function loadMatch() {
@@ -70,6 +80,7 @@ export default function ChatScreen() {
     socketRef.current = socket;
     socket.emit("join-match", matchId);
     socket.on("new-message", (msg: Message) => {
+      setAgentTyping(false);
       setMessages((prev) => {
         if (prev.find((m) => m.id === msg.id)) return prev;
         // Reconcile: if this is our own message echoed back, drop the optimistic copy.
@@ -80,6 +91,20 @@ export default function ChatScreen() {
       });
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     });
+    socket.on("typing", ({ isTyping }: { matchId: string; isTyping: boolean }) => {
+      setAgentTyping(isTyping);
+      if (typingHideTimeout.current) clearTimeout(typingHideTimeout.current);
+      // Safety: auto-hide if the stop signal never arrives.
+      if (isTyping) typingHideTimeout.current = setTimeout(() => setAgentTyping(false), 6000);
+    });
+  }
+
+  function emitTyping() {
+    socketRef.current?.emit("typing", matchId, true);
+    if (typingTimeout.current) clearTimeout(typingTimeout.current);
+    typingTimeout.current = setTimeout(() => {
+      socketRef.current?.emit("typing", matchId, false);
+    }, 1800);
   }
 
   async function deliver(content: string, tempId: string) {
@@ -101,6 +126,8 @@ export default function ChatScreen() {
     const content = input.trim();
     if (!content) return;
     setInput("");
+    if (typingTimeout.current) clearTimeout(typingTimeout.current);
+    socketRef.current?.emit("typing", matchId, false);
     const tempId = `temp-${Date.now()}`;
     const optimistic: Message = {
       id: tempId,
@@ -128,7 +155,7 @@ export default function ChatScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.centered}><ActivityIndicator size="large" color={Colors.primary} /></View>
+        <View style={styles.centered}><ActivityIndicator size="large" color={colors.primary} /></View>
       </SafeAreaView>
     );
   }
@@ -176,6 +203,18 @@ export default function ChatScreen() {
           ListEmptyComponent={
             <View style={styles.emptyChat}>
               <Text style={styles.emptyChatText}>👋 Say hello to {match?.agent.name}!</Text>
+              <Text style={styles.emptyChatSub}>Not sure where to start? Try one of these:</Text>
+              <View style={styles.promptList}>
+                {[
+                  "Hi! When are you available for a call?",
+                  "What areas do you know best?",
+                  "I'd like to schedule a consultation.",
+                ].map((p) => (
+                  <TouchableOpacity key={p} style={styles.promptChip} onPress={() => setInput(p)} activeOpacity={0.7}>
+                    <Text style={styles.promptChipText}>{p}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
           }
           renderItem={({ item }) => {
@@ -207,13 +246,19 @@ export default function ChatScreen() {
           }}
         />
 
+        {agentTyping && (
+          <View style={styles.typingRow}>
+            <Text style={styles.typingText}>{match?.agent.name ?? "Agent"} is typing…</Text>
+          </View>
+        )}
+
         <View style={styles.inputBar}>
           <TextInput
             style={styles.textInput}
             value={input}
-            onChangeText={setInput}
+            onChangeText={(t) => { setInput(t); if (t) emitTyping(); }}
             placeholder="Type a message..."
-            placeholderTextColor={Colors.mutedForeground}
+            placeholderTextColor={colors.mutedForeground}
             multiline
             onSubmitEditing={sendMessage}
             returnKeyType="send"
@@ -227,50 +272,63 @@ export default function ChatScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
   flex: { flex: 1 },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
-  agentBar: { flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderBottomWidth: 1, borderBottomColor: Colors.border, backgroundColor: Colors.card },
+  agentBar: { flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderBottomWidth: 1, borderBottomColor: c.border, backgroundColor: c.card },
   agentAvatar: { width: 42, height: 42, borderRadius: 21 },
   agentBarInfo: { flex: 1 },
-  agentName: { fontSize: 16, fontWeight: "700", color: Colors.foreground },
-  agentSub: { fontSize: 12, color: Colors.mutedForeground },
+  agentName: { fontSize: 16, fontWeight: "700", color: c.foreground },
+  agentSub: { fontSize: 12, color: c.mutedForeground },
   agentBarActions: { flexDirection: "row", gap: 8 },
   agentBarBtn: {
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.background,
+    borderColor: c.border,
+    backgroundColor: c.background,
   },
   agentBarBtnPrimary: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: c.primary,
+    borderColor: c.primary,
   },
-  agentBarBtnText: { fontSize: 12, fontWeight: "600", color: Colors.foreground },
+  agentBarBtnText: { fontSize: 12, fontWeight: "600", color: c.foreground },
   agentBarBtnTextPrimary: { color: "#fff" },
   messageList: { padding: 16, gap: 8, paddingBottom: 8 },
-  emptyChat: { flex: 1, alignItems: "center", paddingTop: 80 },
-  emptyChatText: { color: Colors.mutedForeground, fontSize: 16 },
+  emptyChat: { flex: 1, alignItems: "center", paddingTop: 60, paddingHorizontal: 24 },
+  emptyChatText: { color: c.foreground, fontSize: 17, fontWeight: "600" },
+  emptyChatSub: { color: c.mutedForeground, fontSize: 13, marginTop: 6, marginBottom: 14 },
+  promptList: { gap: 8, alignSelf: "stretch" },
+  promptChip: {
+    borderWidth: 1.5,
+    borderColor: c.primaryLight,
+    backgroundColor: c.primaryLight + "55",
+    borderRadius: 16,
+    paddingVertical: 11,
+    paddingHorizontal: 16,
+  },
+  promptChipText: { color: c.primary, fontSize: 14, fontWeight: "600", textAlign: "center" },
+  typingRow: { paddingHorizontal: 20, paddingBottom: 4 },
+  typingText: { fontSize: 12, color: c.mutedForeground, fontStyle: "italic" },
   bubble: { maxWidth: "78%", borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 4 },
-  bubbleMe: { alignSelf: "flex-end", backgroundColor: Colors.primary, borderBottomRightRadius: 4 },
-  bubbleThem: { alignSelf: "flex-start", backgroundColor: Colors.muted, borderBottomLeftRadius: 4 },
-  bubbleFailed: { backgroundColor: Colors.destructive },
+  bubbleMe: { alignSelf: "flex-end", backgroundColor: c.primary, borderBottomRightRadius: 4 },
+  bubbleThem: { alignSelf: "flex-start", backgroundColor: c.muted, borderBottomLeftRadius: 4 },
+  bubbleFailed: { backgroundColor: c.destructive },
   bubbleText: { fontSize: 15, lineHeight: 21 },
   bubbleTextMe: { color: "#fff" },
-  bubbleTextThem: { color: Colors.foreground },
+  bubbleTextThem: { color: c.foreground },
   bubbleMeta: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 4, marginTop: 4 },
   bubbleTime: { fontSize: 10 },
   bubbleTimeMe: { color: "rgba(255,255,255,0.6)" },
-  bubbleTimeThem: { color: Colors.mutedForeground },
+  bubbleTimeThem: { color: c.mutedForeground },
   bubbleCheck: { fontSize: 10, color: "rgba(255,255,255,0.7)" },
   retryRow: { alignSelf: "flex-end", paddingVertical: 4, paddingHorizontal: 2 },
-  retryText: { fontSize: 11, color: Colors.destructive, fontWeight: "600" },
-  inputBar: { flexDirection: "row", alignItems: "flex-end", padding: 12, gap: 10, borderTopWidth: 1, borderTopColor: Colors.border, backgroundColor: Colors.background },
-  textInput: { flex: 1, borderWidth: 1, borderColor: Colors.border, borderRadius: 22, paddingHorizontal: 16, paddingVertical: 10, fontSize: 15, color: Colors.foreground, maxHeight: 100, backgroundColor: Colors.card },
-  sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.primary, justifyContent: "center", alignItems: "center" },
+  retryText: { fontSize: 11, color: c.destructive, fontWeight: "600" },
+  inputBar: { flexDirection: "row", alignItems: "flex-end", padding: 12, gap: 10, borderTopWidth: 1, borderTopColor: c.border, backgroundColor: c.background },
+  textInput: { flex: 1, borderWidth: 1, borderColor: c.border, borderRadius: 22, paddingHorizontal: 16, paddingVertical: 10, fontSize: 15, color: c.foreground, maxHeight: 100, backgroundColor: c.card },
+  sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: c.primary, justifyContent: "center", alignItems: "center" },
   sendBtnDisabled: { opacity: 0.4 },
   sendIcon: { color: "#fff", fontSize: 18, marginLeft: 2 },
 });

@@ -1,8 +1,9 @@
+import { useMemo } from "react";
 import {
   View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { Colors } from "@/lib/constants";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 
 interface SectionProps {
   title: string;
@@ -10,6 +11,8 @@ interface SectionProps {
 }
 
 function PolicySection({ title, children }: SectionProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -20,6 +23,8 @@ function PolicySection({ title, children }: SectionProps) {
 
 export default function TermsScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -66,10 +71,10 @@ export default function TermsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: c.background,
   },
   header: {
     flexDirection: "row",
@@ -78,21 +83,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.cardBorder,
-    backgroundColor: Colors.background,
+    borderBottomColor: c.cardBorder,
+    backgroundColor: c.background,
   },
   backButton: {
     minWidth: 64,
   },
   backText: {
     fontSize: 16,
-    color: Colors.primary,
+    color: c.primary,
     fontWeight: "500",
   },
   headerTitle: {
     fontSize: 17,
     fontWeight: "700",
-    color: Colors.foreground,
+    color: c.foreground,
   },
   content: {
     paddingHorizontal: 20,
@@ -101,7 +106,7 @@ const styles = StyleSheet.create({
   },
   lastUpdated: {
     fontSize: 13,
-    color: Colors.mutedForeground,
+    color: c.mutedForeground,
     marginBottom: 24,
   },
   section: {
@@ -110,12 +115,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: Colors.primary,
+    color: c.primary,
     marginBottom: 8,
   },
   sectionBody: {
     fontSize: 15,
-    color: Colors.foregroundSecondary,
+    color: c.foregroundSecondary,
     lineHeight: 22,
   },
   footer: {
@@ -124,6 +129,6 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 12,
-    color: Colors.mutedForeground,
+    color: c.mutedForeground,
   },
 });

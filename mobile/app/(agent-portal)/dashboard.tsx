@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   View, Text, TouchableOpacity, StyleSheet,
   SafeAreaView, ScrollView, ActivityIndicator, Alert, RefreshControl,
@@ -6,7 +6,7 @@ import {
 import { useRouter } from "expo-router";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Colors } from "@/lib/constants";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 
 interface AgentStats {
   totalMatches: number;
@@ -38,6 +38,8 @@ interface Booking {
 }
 
 function StatCard({ label, value }: { label: string; value: number | string }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.statCard}>
       <Text style={styles.statValue}>{value}</Text>
@@ -49,6 +51,8 @@ function StatCard({ label, value }: { label: string; value: number | string }) {
 export default function AgentDashboard() {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [stats, setStats] = useState<AgentStats | null>(null);
   const [matches, setMatches] = useState<BuyerMatch[]>([]);
@@ -118,19 +122,19 @@ export default function AgentDashboard() {
 
   function statusColor(status: string): string {
     switch (status?.toLowerCase()) {
-      case "confirmed": return Colors.success;
-      case "declined": return Colors.destructive;
-      case "pending": return Colors.warning;
-      default: return Colors.mutedForeground;
+      case "confirmed": return colors.success;
+      case "declined": return colors.destructive;
+      case "pending": return colors.warning;
+      default: return colors.mutedForeground;
     }
   }
 
   function statusBg(status: string): string {
     switch (status?.toLowerCase()) {
-      case "confirmed": return Colors.successLight;
-      case "declined": return Colors.destructiveLight;
-      case "pending": return Colors.warningLight;
-      default: return Colors.muted;
+      case "confirmed": return colors.successLight;
+      case "declined": return colors.destructiveLight;
+      case "pending": return colors.warningLight;
+      default: return colors.muted;
     }
   }
 
@@ -142,7 +146,7 @@ export default function AgentDashboard() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading your dashboard…</Text>
         </View>
       </SafeAreaView>
@@ -154,7 +158,7 @@ export default function AgentDashboard() {
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
         {/* Pending Approval Banner */}
         {stats && stats.isApproved === false && (
@@ -344,23 +348,23 @@ export default function AgentDashboard() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.surface },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.surface },
   scroll: { padding: 20 },
 
   loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12 },
-  loadingText: { color: Colors.mutedForeground, fontSize: 15 },
+  loadingText: { color: c.mutedForeground, fontSize: 15 },
 
   pendingBanner: {
-    backgroundColor: Colors.warningLight,
+    backgroundColor: c.warningLight,
     borderWidth: 1,
-    borderColor: Colors.warning,
+    borderColor: c.warning,
     borderRadius: 12,
     padding: 12,
     marginBottom: 20,
   },
-  pendingBannerTitle: { fontSize: 14, fontWeight: "800", color: Colors.warning, marginBottom: 4 },
-  pendingBannerBody: { fontSize: 13, color: Colors.warning, lineHeight: 18 },
+  pendingBannerTitle: { fontSize: 14, fontWeight: "800", color: c.warning, marginBottom: 4 },
+  pendingBannerBody: { fontSize: 13, color: c.warning, lineHeight: 18 },
 
   header: {
     flexDirection: "row",
@@ -368,47 +372,47 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: 24,
   },
-  greeting: { fontSize: 14, color: Colors.mutedForeground, fontWeight: "500" },
+  greeting: { fontSize: 14, color: c.mutedForeground, fontWeight: "500" },
   agentNameRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 2 },
-  agentName: { fontSize: 26, fontWeight: "800", color: Colors.foreground, letterSpacing: -0.5 },
+  agentName: { fontSize: 26, fontWeight: "800", color: c.foreground, letterSpacing: -0.5 },
   approvedBadge: {
-    backgroundColor: Colors.successLight,
+    backgroundColor: c.successLight,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderWidth: 1,
-    borderColor: Colors.success + "44",
+    borderColor: c.success + "44",
     alignSelf: "center",
   },
-  approvedBadgeText: { fontSize: 12, fontWeight: "700", color: Colors.success },
-  ratingText: { fontSize: 13, color: Colors.mutedForeground, fontWeight: "600", marginTop: 4 },
+  approvedBadgeText: { fontSize: 12, fontWeight: "700", color: c.success },
+  ratingText: { fontSize: 13, color: c.mutedForeground, fontWeight: "600", marginTop: 4 },
   agentBadge: {
     marginTop: 6,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: c.primaryLight,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
     alignSelf: "flex-start",
   },
-  agentBadgeText: { fontSize: 12, fontWeight: "700", color: Colors.primary },
+  agentBadgeText: { fontSize: 12, fontWeight: "700", color: c.primary },
   headerActions: { gap: 8, alignItems: "flex-end" },
   switchModeBtn: {
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: c.primaryLight,
     borderWidth: 1.5,
-    borderColor: Colors.primary + "44",
+    borderColor: c.primary + "44",
   },
-  switchModeText: { fontSize: 13, fontWeight: "700", color: Colors.primary },
+  switchModeText: { fontSize: 13, fontWeight: "700", color: c.primary },
   logoutBtn: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: Colors.border,
+    borderColor: c.border,
   },
-  logoutText: { fontSize: 13, fontWeight: "600", color: Colors.mutedForeground },
+  logoutText: { fontSize: 13, fontWeight: "600", color: c.mutedForeground },
 
   statsRow: {
     flexDirection: "row",
@@ -417,26 +421,26 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderRadius: 16,
     padding: 16,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    shadowColor: Colors.shadowColor,
+    borderColor: c.cardBorder,
+    shadowColor: c.shadowColor,
     shadowOpacity: 0.05,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
-  statValue: { fontSize: 28, fontWeight: "800", color: Colors.primary },
-  statLabel: { fontSize: 11, color: Colors.mutedForeground, fontWeight: "600", textAlign: "center", marginTop: 4, lineHeight: 15 },
+  statValue: { fontSize: 28, fontWeight: "800", color: c.primary },
+  statLabel: { fontSize: 11, color: c.mutedForeground, fontWeight: "600", textAlign: "center", marginTop: 4, lineHeight: 15 },
 
   section: { marginBottom: 28 },
   sectionHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 },
-  sectionTitle: { fontSize: 19, fontWeight: "800", color: Colors.foreground },
+  sectionTitle: { fontSize: 19, fontWeight: "800", color: c.foreground },
   badge: {
-    backgroundColor: Colors.primary,
+    backgroundColor: c.primary,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
@@ -447,28 +451,28 @@ const styles = StyleSheet.create({
   badgeText: { color: "#fff", fontSize: 11, fontWeight: "800" },
 
   emptyCard: {
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: c.cardBorder,
     padding: 28,
     alignItems: "center",
     gap: 8,
   },
   emptyEmoji: { fontSize: 36 },
-  emptyText: { fontSize: 16, fontWeight: "700", color: Colors.foreground },
-  emptyHint: { fontSize: 13, color: Colors.mutedForeground, textAlign: "center", lineHeight: 18 },
+  emptyText: { fontSize: 16, fontWeight: "700", color: c.foreground },
+  emptyHint: { fontSize: 13, color: c.mutedForeground, textAlign: "center", lineHeight: 18 },
 
   matchCard: {
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: c.cardBorder,
     padding: 14,
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 10,
-    shadowColor: Colors.shadowColor,
+    shadowColor: c.shadowColor,
     shadowOpacity: 0.04,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
@@ -478,22 +482,22 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: c.primaryLight,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
   },
-  matchAvatarText: { fontSize: 18, fontWeight: "800", color: Colors.primary },
+  matchAvatarText: { fontSize: 18, fontWeight: "800", color: c.primary },
   matchInfo: { flex: 1 },
-  matchName: { fontSize: 15, fontWeight: "700", color: Colors.foreground },
-  matchEmail: { fontSize: 13, color: Colors.mutedForeground, marginTop: 2 },
-  matchScore: { fontSize: 12, color: Colors.success, fontWeight: "700", marginTop: 3 },
+  matchName: { fontSize: 15, fontWeight: "700", color: c.foreground },
+  matchEmail: { fontSize: 13, color: c.mutedForeground, marginTop: 2 },
+  matchScore: { fontSize: 12, color: c.success, fontWeight: "700", marginTop: 3 },
   chatBtn: {
-    backgroundColor: Colors.primary,
+    backgroundColor: c.primary,
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 9,
-    shadowColor: Colors.primary,
+    shadowColor: c.primary,
     shadowOpacity: 0.25,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
@@ -502,13 +506,13 @@ const styles = StyleSheet.create({
   chatBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
 
   bookingCard: {
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: c.cardBorder,
     padding: 14,
     marginBottom: 10,
-    shadowColor: Colors.shadowColor,
+    shadowColor: c.shadowColor,
     shadowOpacity: 0.04,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
@@ -516,8 +520,8 @@ const styles = StyleSheet.create({
   },
   bookingTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   bookingInfo: { flex: 1, marginRight: 10 },
-  bookingName: { fontSize: 15, fontWeight: "700", color: Colors.foreground },
-  bookingTime: { fontSize: 13, color: Colors.mutedForeground, marginTop: 3 },
+  bookingName: { fontSize: 15, fontWeight: "700", color: c.foreground },
+  bookingTime: { fontSize: 13, color: c.mutedForeground, marginTop: 3 },
   statusPill: {
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -527,32 +531,32 @@ const styles = StyleSheet.create({
   bookingActions: { flexDirection: "row", gap: 10, marginTop: 12 },
   confirmBtn: {
     flex: 1,
-    backgroundColor: Colors.successLight,
+    backgroundColor: c.successLight,
     borderRadius: 10,
     paddingVertical: 10,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: Colors.success + "44",
+    borderColor: c.success + "44",
   },
-  confirmBtnText: { color: Colors.success, fontWeight: "700", fontSize: 14 },
+  confirmBtnText: { color: c.success, fontWeight: "700", fontSize: 14 },
   declineBtn: {
     flex: 1,
-    backgroundColor: Colors.destructiveLight,
+    backgroundColor: c.destructiveLight,
     borderRadius: 10,
     paddingVertical: 10,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: Colors.destructive + "44",
+    borderColor: c.destructive + "44",
   },
-  declineBtnText: { color: Colors.destructive, fontWeight: "700", fontSize: 14 },
+  declineBtnText: { color: c.destructive, fontWeight: "700", fontSize: 14 },
 
   messagesBtn: {
-    backgroundColor: Colors.primary,
+    backgroundColor: c.primary,
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: "center",
     marginBottom: 10,
-    shadowColor: Colors.primary,
+    shadowColor: c.primary,
     shadowOpacity: 0.2,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
@@ -561,13 +565,13 @@ const styles = StyleSheet.create({
   messagesBtnText: { color: "#fff", fontWeight: "800", fontSize: 16 },
 
   editProfileBtn: {
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: Colors.primary,
+    borderColor: c.primary,
     paddingVertical: 16,
     alignItems: "center",
     marginBottom: 8,
   },
-  editProfileText: { color: Colors.primary, fontWeight: "800", fontSize: 16 },
+  editProfileText: { color: c.primary, fontWeight: "800", fontSize: 16 },
 });

@@ -1,11 +1,11 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   View, Text, FlatList, TouchableOpacity, Image, StyleSheet,
   SafeAreaView, Alert, RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { api } from "@/lib/api";
-import { Colors } from "@/lib/constants";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 import { SkeletonRow } from "@/components/Skeleton";
 import { VerifiedBadge, isVerified } from "@/components/VerifiedBadge";
 import { haptics } from "@/lib/haptics";
@@ -32,6 +32,8 @@ interface Match {
 }
 
 export default function MatchesScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -91,7 +93,7 @@ export default function MatchesScreen() {
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
           }
           renderItem={({ item }) => <MatchCard match={item} />}
         />
@@ -101,6 +103,8 @@ export default function MatchesScreen() {
 }
 
 function MatchCard({ match }: { match: Match }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const agent = match.agent;
   const avatarUri = agent.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&size=120&background=dbeafe&color=2563eb`;
@@ -167,55 +171,55 @@ function MatchCard({ match }: { match: Match }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.cardBorder,
+    borderBottomColor: c.cardBorder,
   },
-  title: { fontSize: 24, fontWeight: "800", color: Colors.foreground },
-  subtitle: { fontSize: 13, color: Colors.mutedForeground, marginTop: 2 },
+  title: { fontSize: 24, fontWeight: "800", color: c.foreground },
+  subtitle: { fontSize: 13, color: c.mutedForeground, marginTop: 2 },
   list: { padding: 16, gap: 12 },
   card: {
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderRadius: 18,
     padding: 16,
     gap: 12,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    shadowColor: Colors.shadowColor,
+    borderColor: c.cardBorder,
+    shadowColor: c.shadowColor,
     shadowOpacity: 0.06,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
   },
-  avatar: { width: 70, height: 70, borderRadius: 35, borderWidth: 2, borderColor: Colors.primaryLight },
+  avatar: { width: 70, height: 70, borderRadius: 35, borderWidth: 2, borderColor: c.primaryLight },
   info: { gap: 4 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  name: { fontSize: 17, fontWeight: "800", color: Colors.foreground },
-  lastMessage: { fontSize: 13, color: Colors.mutedForeground, fontStyle: "italic", marginTop: 2 },
+  name: { fontSize: 17, fontWeight: "800", color: c.foreground },
+  lastMessage: { fontSize: 13, color: c.mutedForeground, fontStyle: "italic", marginTop: 2 },
   ratingRow: { flexDirection: "row", alignItems: "center", gap: 3 },
   star: { fontSize: 12 },
-  ratingText: { fontSize: 13, fontWeight: "700", color: Colors.foreground },
-  ratingCount: { fontSize: 12, color: Colors.mutedForeground },
-  dot: { fontSize: 12, color: Colors.mutedForeground },
-  yearsText: { fontSize: 12, color: Colors.mutedForeground },
-  areas: { fontSize: 12, color: Colors.mutedForeground, marginTop: 2 },
+  ratingText: { fontSize: 13, fontWeight: "700", color: c.foreground },
+  ratingCount: { fontSize: 12, color: c.mutedForeground },
+  dot: { fontSize: 12, color: c.mutedForeground },
+  yearsText: { fontSize: 12, color: c.mutedForeground },
+  areas: { fontSize: 12, color: c.mutedForeground, marginTop: 2 },
   tagRow: { flexDirection: "row", gap: 6, flexWrap: "wrap", marginTop: 4 },
-  tag: { backgroundColor: Colors.primaryLight, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  tagText: { fontSize: 11, color: Colors.primary, fontWeight: "600" },
+  tag: { backgroundColor: c.primaryLight, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  tagText: { fontSize: 11, color: c.primary, fontWeight: "600" },
   actions: { flexDirection: "row", gap: 10 },
   chatBtn: {
     flex: 1,
-    backgroundColor: Colors.primary,
+    backgroundColor: c.primary,
     borderRadius: 12,
     paddingVertical: 11,
     alignItems: "center",
-    shadowColor: Colors.primary,
+    shadowColor: c.primary,
     shadowOpacity: 0.3,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
@@ -224,16 +228,16 @@ const styles = StyleSheet.create({
   chatBtnText: { color: "#fff", fontWeight: "800", fontSize: 14 },
   bookBtn: {
     flex: 1,
-    backgroundColor: Colors.muted,
+    backgroundColor: c.muted,
     borderRadius: 12,
     paddingVertical: 11,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: c.cardBorder,
   },
-  bookBtnText: { color: Colors.foreground, fontWeight: "700", fontSize: 14 },
+  bookBtnText: { color: c.foreground, fontWeight: "700", fontSize: 14 },
   empty: { flex: 1, justifyContent: "center", alignItems: "center", padding: 32, gap: 12 },
   emptyEmoji: { fontSize: 64 },
-  emptyTitle: { fontSize: 22, fontWeight: "700", color: Colors.foreground },
-  emptySub: { fontSize: 15, color: Colors.mutedForeground, textAlign: "center", lineHeight: 22 },
+  emptyTitle: { fontSize: 22, fontWeight: "700", color: c.foreground },
+  emptySub: { fontSize: 15, color: c.mutedForeground, textAlign: "center", lineHeight: 22 },
 });

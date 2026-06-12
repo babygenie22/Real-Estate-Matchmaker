@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   SafeAreaView, ScrollView, Alert, ActivityIndicator, Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { api } from "@/lib/api";
-import { Colors } from "@/lib/constants";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 
 const LANGUAGES = [
   "English", "Spanish", "Arabic", "Mandarin", "French", "Hindi", "Portuguese",
@@ -30,6 +30,8 @@ const PERSONALITY_TAGS = [
 ];
 
 function ChipSelect({ options, selected, onToggle }: { options: string[]; selected: string[]; onToggle: (v: string) => void }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.chipWrap}>
       {options.map((opt) => {
@@ -51,6 +53,8 @@ function ChipSelect({ options, selected, onToggle }: { options: string[]; select
 
 export default function AgentProfileScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedBanner, setSavedBanner] = useState(false);
@@ -140,7 +144,7 @@ export default function AgentProfileScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.center}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -196,7 +200,7 @@ export default function AgentProfileScreen() {
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="url"
-              placeholderTextColor={Colors.mutedForeground}
+              placeholderTextColor={colors.mutedForeground}
             />
           </View>
         </View>
@@ -232,7 +236,7 @@ export default function AgentProfileScreen() {
               onChangeText={(t) => setBio(t.slice(0, 500))}
               multiline
               numberOfLines={4}
-              placeholderTextColor={Colors.mutedForeground}
+              placeholderTextColor={colors.mutedForeground}
               textAlignVertical="top"
             />
           </View>
@@ -249,7 +253,7 @@ export default function AgentProfileScreen() {
                 value={priceMin}
                 onChangeText={(t) => setPriceMin(t.replace(/[^0-9]/g, ""))}
                 keyboardType="numeric"
-                placeholderTextColor={Colors.mutedForeground}
+                placeholderTextColor={colors.mutedForeground}
               />
             </View>
             <Text style={styles.priceTo}>to</Text>
@@ -261,7 +265,7 @@ export default function AgentProfileScreen() {
                 value={priceMax}
                 onChangeText={(t) => setPriceMax(t.replace(/[^0-9]/g, ""))}
                 keyboardType="numeric"
-                placeholderTextColor={Colors.mutedForeground}
+                placeholderTextColor={colors.mutedForeground}
               />
             </View>
           </View>
@@ -297,6 +301,8 @@ function Field({ label, value, onChangeText, placeholder, keyboardType, autoCapi
   label: string; value: string; onChangeText: (v: string) => void;
   placeholder?: string; keyboardType?: any; autoCapitalize?: any;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.fieldWrap}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -308,27 +314,27 @@ function Field({ label, value, onChangeText, placeholder, keyboardType, autoCapi
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize ?? "none"}
         autoCorrect={false}
-        placeholderTextColor={Colors.mutedForeground}
+        placeholderTextColor={colors.mutedForeground}
       />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
 
   header: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: Colors.cardBorder,
-    backgroundColor: Colors.background,
+    borderBottomWidth: 1, borderBottomColor: c.cardBorder,
+    backgroundColor: c.background,
   },
   backBtn: { paddingVertical: 8, paddingHorizontal: 4 },
-  backText: { fontSize: 15, fontWeight: "600", color: Colors.primary },
-  headerTitle: { fontSize: 17, fontWeight: "800", color: Colors.foreground },
+  backText: { fontSize: 15, fontWeight: "600", color: c.primary },
+  headerTitle: { fontSize: 17, fontWeight: "800", color: c.foreground },
   saveBtn: {
-    backgroundColor: Colors.primary, borderRadius: 10,
+    backgroundColor: c.primary, borderRadius: 10,
     paddingVertical: 8, paddingHorizontal: 16, minWidth: 60, alignItems: "center",
   },
   saveBtnDisabled: { opacity: 0.5 },
@@ -337,65 +343,65 @@ const styles = StyleSheet.create({
   scroll: { padding: 20, gap: 8 },
 
   savedBanner: {
-    backgroundColor: Colors.successLight,
+    backgroundColor: c.successLight,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.success + "44",
+    borderBottomColor: c.success + "44",
     paddingVertical: 10,
     alignItems: "center",
   },
-  savedBannerText: { fontSize: 14, fontWeight: "700", color: Colors.success },
+  savedBannerText: { fontSize: 14, fontWeight: "700", color: c.success },
 
   photoSection: { alignItems: "center", marginBottom: 16, gap: 12 },
-  photoImg: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: Colors.primary },
+  photoImg: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: c.primary },
   photoPlaceholder: {
     width: 100, height: 100, borderRadius: 50,
-    backgroundColor: Colors.muted, borderWidth: 2, borderColor: Colors.border,
+    backgroundColor: c.muted, borderWidth: 2, borderColor: c.border,
     alignItems: "center", justifyContent: "center",
   },
   photoPlaceholderIcon: { fontSize: 40 },
   photoActions: { flexDirection: "row", gap: 10, alignItems: "center" },
   photoBtn: {
     paddingVertical: 10, paddingHorizontal: 18, borderRadius: 12,
-    borderWidth: 1.5, borderColor: Colors.primary, backgroundColor: Colors.primaryLight,
+    borderWidth: 1.5, borderColor: c.primary, backgroundColor: c.primaryLight,
   },
-  photoBtnText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
+  photoBtnText: { fontSize: 14, fontWeight: "700", color: c.primary },
   removeBtn: {
     paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12,
-    backgroundColor: Colors.destructiveLight,
+    backgroundColor: c.destructiveLight,
   },
-  removeBtnText: { fontSize: 14, fontWeight: "700", color: Colors.destructive },
+  removeBtnText: { fontSize: 14, fontWeight: "700", color: c.destructive },
 
   section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 18, fontWeight: "800", color: Colors.foreground, marginBottom: 14 },
+  sectionTitle: { fontSize: 18, fontWeight: "800", color: c.foreground, marginBottom: 14 },
 
   fieldWrap: { gap: 6, marginBottom: 14 },
-  fieldLabel: { fontSize: 13, fontWeight: "700", color: Colors.foregroundSecondary },
-  fieldHint: { fontSize: 12, color: Colors.mutedForeground },
+  fieldLabel: { fontSize: 13, fontWeight: "700", color: c.foregroundSecondary },
+  fieldHint: { fontSize: 12, color: c.mutedForeground },
   input: {
-    borderWidth: 1.5, borderColor: Colors.border, borderRadius: 12,
+    borderWidth: 1.5, borderColor: c.border, borderRadius: 12,
     paddingHorizontal: 14, paddingVertical: 13,
-    fontSize: 16, color: Colors.foreground, backgroundColor: Colors.background,
+    fontSize: 16, color: c.foreground, backgroundColor: c.background,
   },
   textArea: { minHeight: 100, paddingTop: 12 },
 
   stepperRow: { flexDirection: "row", alignItems: "center", gap: 16 },
   stepperBtn: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: Colors.muted, borderWidth: 1.5, borderColor: Colors.border,
+    backgroundColor: c.muted, borderWidth: 1.5, borderColor: c.border,
     alignItems: "center", justifyContent: "center",
   },
-  stepperBtnText: { fontSize: 22, color: Colors.foreground, fontWeight: "600", lineHeight: 26 },
-  stepperValue: { fontSize: 17, fontWeight: "700", color: Colors.foreground, minWidth: 70, textAlign: "center" },
+  stepperBtnText: { fontSize: 22, color: c.foreground, fontWeight: "600", lineHeight: 26 },
+  stepperValue: { fontSize: 17, fontWeight: "700", color: c.foreground, minWidth: 70, textAlign: "center" },
 
   priceRow: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
-  priceTo: { color: Colors.mutedForeground, fontSize: 14, fontWeight: "600", paddingBottom: 14 },
+  priceTo: { color: c.mutedForeground, fontSize: 14, fontWeight: "600", paddingBottom: 14 },
 
   chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
     paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20,
-    borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.background,
+    borderWidth: 1.5, borderColor: c.border, backgroundColor: c.background,
   },
-  chipActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
-  chipText: { fontSize: 14, color: Colors.foreground, fontWeight: "500" },
-  chipTextActive: { color: Colors.primary, fontWeight: "700" },
+  chipActive: { borderColor: c.primary, backgroundColor: c.primaryLight },
+  chipText: { fontSize: 14, color: c.foreground, fontWeight: "500" },
+  chipTextActive: { color: c.primary, fontWeight: "700" },
 });

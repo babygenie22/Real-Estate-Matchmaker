@@ -1,19 +1,20 @@
 import { useEffect, useState } from "react";
 import { Tabs } from "expo-router";
 import { Text, View } from "react-native";
-import { Colors } from "@/lib/constants";
+import { useTheme } from "@/lib/theme";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 function TabIcon({ emoji, focused, badge }: { emoji: string; focused: boolean; badge?: number }) {
+  const { colors } = useTheme();
   return (
     <View style={{ alignItems: "center", justifyContent: "center" }}>
       {focused ? (
-        <View style={{ backgroundColor: Colors.primaryLight, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}>
+        <View style={{ backgroundColor: colors.primaryLight, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}>
           <Text style={{ fontSize: 20 }}>{emoji}</Text>
         </View>
       ) : (
-        <Text style={{ fontSize: 20, opacity: 0.55 }}>{emoji}</Text>
+        <Text style={{ fontSize: 20, opacity: 0.45 }}>{emoji}</Text>
       )}
       {badge != null && badge > 0 && (
         <View style={{
@@ -23,7 +24,7 @@ function TabIcon({ emoji, focused, badge }: { emoji: string; focused: boolean; b
           minWidth: 16,
           height: 16,
           borderRadius: 8,
-          backgroundColor: Colors.destructive,
+          backgroundColor: colors.destructive,
           alignItems: "center",
           justifyContent: "center",
           paddingHorizontal: 3,
@@ -38,6 +39,7 @@ function TabIcon({ emoji, focused, badge }: { emoji: string; focused: boolean; b
 }
 
 export default function TabsLayout() {
+  const { colors } = useTheme();
   const { user } = useAuth();
   const [unread, setUnread] = useState<number | undefined>(undefined);
   const [matchCount, setMatchCount] = useState<number | undefined>(undefined);
@@ -69,15 +71,15 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.mutedForeground,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.mutedForeground,
         tabBarStyle: {
-          borderTopColor: Colors.cardBorder,
-          backgroundColor: Colors.background,
+          borderTopColor: colors.cardBorder,
+          backgroundColor: colors.background,
           paddingBottom: 8,
           paddingTop: 4,
           height: 68,
-          shadowColor: Colors.shadowColor,
+          shadowColor: colors.shadowColor,
           shadowOpacity: 0.08,
           shadowRadius: 12,
           shadowOffset: { width: 0, height: -4 },
