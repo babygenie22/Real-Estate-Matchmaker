@@ -16,6 +16,14 @@ type Agent = FavoriteAgent;
 const SPECIALTIES = ["First-Time Buyers", "Luxury Homes", "Investment", "New Construction", "Relocation"];
 const AREAS = ["Detroit", "Ann Arbor", "Birmingham", "Royal Oak", "Troy", "Novi"];
 
+// Budget bands; an agent matches when their price range overlaps the band.
+const BUDGETS: { label: string; value: string; min: number; max: number }[] = [
+  { label: "Under $300K", value: "u300", min: 0, max: 300_000 },
+  { label: "$300K–$600K", value: "300-600", min: 300_000, max: 600_000 },
+  { label: "$600K–$1M", value: "600-1m", min: 600_000, max: 1_000_000 },
+  { label: "$1M+", value: "1m", min: 1_000_000, max: Number.MAX_SAFE_INTEGER },
+];
+
 type SortKey = "rating" | "deals" | "experience" | "fastest";
 const SORTS: { key: SortKey; label: string }[] = [
   { key: "rating", label: "Top rated" },
@@ -44,6 +52,7 @@ export default function SearchScreen() {
   const [query, setQuery] = useState("");
   const [specialty, setSpecialty] = useState("");
   const [area, setArea] = useState("");
+  const [budget, setBudget] = useState("");
   const [sort, setSort] = useState<SortKey>("rating");
 
   async function load() {
@@ -76,6 +85,15 @@ export default function SearchScreen() {
       }
       if (specialty && !(a.specialties ?? []).some((s) => s === specialty)) return false;
       if (area && !(a.serviceAreas ?? []).some((s) => s === area)) return false;
+      if (budget) {
+        const band = BUDGETS.find((b) => b.value === budget);
+        if (band) {
+          // Overlap test: agent's [min, max] intersects the band (open-ended on missing bounds).
+          const aMin = a.priceRangeMin ?? 0;
+          const aMax = a.priceRangeMax ?? Number.MAX_SAFE_INTEGER;
+          if (aMin > band.max || aMax < band.min) return false;
+        }
+      }
       return true;
     });
     list = [...list].sort((a, b) => {
@@ -90,11 +108,11 @@ export default function SearchScreen() {
     return list;
   }, [agents, query, specialty, area, sort]);
 
-  const filtersActive = query !== "" || specialty !== "" || area !== "";
+  const filtersActive = query !== "" || specialty !== "" || area !== "" || budget !== "";
 
   function clearFilters() {
     haptics.selection();
-    setQuery(""); setSpecialty(""); setArea("");
+    setQuery(""); setSpecialty(""); setArea(""); setBudget("");
   }
 
   return (
@@ -136,6 +154,19 @@ export default function SearchScreen() {
           return (
             <TouchableOpacity key={f.value || "all-ar"} style={[styles.chip, active && styles.chipActive]}
               onPress={() => { haptics.selection(); setArea(f.value); }} activeOpacity={0.7}>
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>{f.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* Budget filters */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll} contentContainerStyle={styles.chipRow}>
+        {[{ label: "Any budget", value: "" }, ...BUDGETS.map((b) => ({ label: b.label, value: b.value }))].map((f) => {
+          const active = budget === f.value;
+          return (
+            <TouchableOpacity key={f.value || "all-bud"} style={[styles.chip, active && styles.chipActive]}
+              onPress={() => { haptics.selection(); setBudget(f.value); }} activeOpacity={0.7}>
               <Text style={[styles.chipText, active && styles.chipTextActive]}>{f.label}</Text>
             </TouchableOpacity>
           );
