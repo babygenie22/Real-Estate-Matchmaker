@@ -14,7 +14,7 @@ import { useTheme, type ThemeColors } from "@/lib/theme";
 type Agent = FavoriteAgent;
 
 const SPECIALTIES = ["First-Time Buyers", "Luxury Homes", "Investment", "New Construction", "Relocation"];
-const AREAS = ["Metro Detroit", "Ann Arbor", "Grand Rapids", "Lansing", "Oakland County"];
+const AREAS = ["Detroit", "Ann Arbor", "Birmingham", "Royal Oak", "Troy", "Novi"];
 
 type SortKey = "rating" | "deals" | "experience" | "fastest";
 const SORTS: { key: SortKey; label: string }[] = [

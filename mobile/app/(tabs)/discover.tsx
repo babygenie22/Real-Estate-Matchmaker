@@ -37,13 +37,15 @@ const SPECIALTY_FILTERS = [
   { label: "Relocation", value: "Relocation" },
 ];
 
+// Values match the cities agents actually list in serviceAreas (see seed data).
 const AREA_FILTERS = [
   { label: "All Areas", value: "" },
-  { label: "Metro Detroit", value: "Metro Detroit" },
+  { label: "Detroit", value: "Detroit" },
   { label: "Ann Arbor", value: "Ann Arbor" },
-  { label: "Grand Rapids", value: "Grand Rapids" },
-  { label: "Lansing", value: "Lansing" },
-  { label: "Oakland County", value: "Oakland County" },
+  { label: "Birmingham", value: "Birmingham" },
+  { label: "Royal Oak", value: "Royal Oak" },
+  { label: "Troy", value: "Troy" },
+  { label: "Novi", value: "Novi" },
 ];
 
 export default function DiscoverScreen() {

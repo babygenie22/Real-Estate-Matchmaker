@@ -42,6 +42,7 @@ export interface AgentFilters {
   zipCode?: string;
   specialty?: string;
   language?: string;
+  area?: string;
   minPrice?: number;
   maxPrice?: number;
   search?: string;
@@ -164,6 +165,13 @@ export class DatabaseStorage implements IStorage {
     if (filters?.zipCode) {
       filtered = filtered.filter(a =>
         a.serviceAreas?.some(area => area.includes(filters.zipCode!))
+      );
+    }
+
+    if (filters?.area) {
+      const target = filters.area.toLowerCase();
+      filtered = filtered.filter(a =>
+        a.serviceAreas?.some(area => area.toLowerCase().includes(target))
       );
     }
 

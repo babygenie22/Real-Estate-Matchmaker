@@ -85,7 +85,7 @@ export async function registerRoutes(
 
   app.get("/api/agents", isAuthenticated, async (req: any, res) => {
     try {
-      const { search, specialty, language, zipCode, minPrice, maxPrice, scored, browse } = req.query;
+      const { search, specialty, language, zipCode, area, minPrice, maxPrice, scored, browse } = req.query;
       const userId = req.user.id;
       let agentList;
       if (scored === "true") {
@@ -94,13 +94,14 @@ export async function registerRoutes(
           specialty: specialty as string | undefined,
           language: language as string | undefined,
           zipCode: zipCode as string | undefined,
+          area: area as string | undefined,
         });
       } else {
         // Browse mode returns ALL approved agents matching the filters (the
         // swipe deck, by contrast, hides agents the buyer already swiped).
         const filterUserId = browse === "true" ? undefined : userId;
         agentList = await storage.getAgents(
-          { search, specialty, language, zipCode, minPrice: minPrice ? Number(minPrice) : undefined, maxPrice: maxPrice ? Number(maxPrice) : undefined },
+          { search, specialty, language, zipCode, area, minPrice: minPrice ? Number(minPrice) : undefined, maxPrice: maxPrice ? Number(maxPrice) : undefined },
           filterUserId
         );
       }
