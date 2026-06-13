@@ -95,7 +95,8 @@ export default function ReviewScreen() {
       await api.post("/api/reviews", {
         agentId: booking.agentId,
         rating,
-        comment: comment.trim() || undefined,
+        // Schema field is `text`; sending `comment` was silently dropped by Zod.
+        text: comment.trim() || undefined,
       });
       haptics.success();
       Alert.alert(

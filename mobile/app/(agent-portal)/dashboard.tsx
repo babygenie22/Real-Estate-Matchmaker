@@ -1,12 +1,29 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  SafeAreaView, ScrollView, ActivityIndicator, Alert, RefreshControl,
+  SafeAreaView, ScrollView, ActivityIndicator, Alert, RefreshControl, Modal,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { haptics } from "@/lib/haptics";
 import { useTheme, type ThemeColors } from "@/lib/theme";
+
+const SLOT_TIMES = ["9:00 AM", "10:00 AM", "11:00 AM", "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM"];
+
+function nextDates(): { label: string; value: string }[] {
+  const out: { label: string; value: string }[] = [];
+  const today = new Date();
+  for (let i = 1; i <= 14; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    out.push({
+      label: d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
+      value: d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+    });
+  }
+  return out;
+}
 
 interface AgentStats {
   totalMatches: number;
@@ -60,6 +77,11 @@ export default function AgentDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [rescheduleTarget, setRescheduleTarget] = useState<Booking | null>(null);
+  const [rsDate, setRsDate] = useState("");
+  const [rsTime, setRsTime] = useState("");
+  const [rsSubmitting, setRsSubmitting] = useState(false);
+  const dateOptions = useMemo(() => nextDates(), []);
 
   async function loadData() {
     try {
@@ -93,6 +115,7 @@ export default function AgentDashboard() {
   }, []);
 
   async function handleBookingAction(bookingId: string | number, action: "confirm" | "decline") {
+    haptics.light();
     try {
       await api.put(`/api/agent-portal/bookings/${bookingId}`, { status: action === "confirm" ? "confirmed" : "declined" });
       setBookings((prev) =>
@@ -102,6 +125,38 @@ export default function AgentDashboard() {
       );
     } catch (err: any) {
       Alert.alert("Error", err.message || `Failed to ${action} booking`);
+    }
+  }
+
+  function openReschedule(booking: Booking) {
+    haptics.light();
+    setRescheduleTarget(booking);
+    setRsDate(booking.confirmedDate || booking.proposedDate || "");
+    setRsTime(booking.confirmedTime || booking.proposedTime || "");
+  }
+
+  async function submitReschedule() {
+    if (!rescheduleTarget || !rsDate || !rsTime) return;
+    setRsSubmitting(true);
+    try {
+      await api.put(`/api/agent-portal/bookings/${rescheduleTarget.id}`, {
+        status: "rescheduled",
+        confirmedDate: rsDate,
+        confirmedTime: rsTime,
+      });
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.id === rescheduleTarget.id
+            ? { ...b, status: "rescheduled", confirmedDate: rsDate, confirmedTime: rsTime }
+            : b
+        )
+      );
+      haptics.success();
+      setRescheduleTarget(null);
+    } catch (err: any) {
+      Alert.alert("Error", err.message || "Failed to propose a new time");
+    } finally {
+      setRsSubmitting(false);
     }
   }
 
@@ -294,22 +349,31 @@ export default function AgentDashboard() {
                     </View>
                   </View>
                   {isPending && (
-                    <View style={styles.bookingActions}>
+                    <>
+                      <View style={styles.bookingActions}>
+                        <TouchableOpacity
+                          style={styles.confirmBtn}
+                          onPress={() => handleBookingAction(booking.id, "confirm")}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={styles.confirmBtnText}>✓ Confirm</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.declineBtn}
+                          onPress={() => handleBookingAction(booking.id, "decline")}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={styles.declineBtnText}>✗ Decline</Text>
+                        </TouchableOpacity>
+                      </View>
                       <TouchableOpacity
-                        style={styles.confirmBtn}
-                        onPress={() => handleBookingAction(booking.id, "confirm")}
+                        style={styles.rescheduleBtn}
+                        onPress={() => openReschedule(booking)}
                         activeOpacity={0.8}
                       >
-                        <Text style={styles.confirmBtnText}>✓ Confirm</Text>
+                        <Text style={styles.rescheduleBtnText}>🔄 Propose a new time</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.declineBtn}
-                        onPress={() => handleBookingAction(booking.id, "decline")}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={styles.declineBtnText}>✗ Decline</Text>
-                      </TouchableOpacity>
-                    </View>
+                    </>
                   )}
                 </View>
               );
@@ -326,6 +390,16 @@ export default function AgentDashboard() {
           <Text style={styles.messagesBtnText}>💬 Messages →</Text>
         </TouchableOpacity>
 
+        {/* Reviews Link */}
+        <TouchableOpacity
+          style={styles.linkRow}
+          onPress={() => router.push("/(agent-portal)/reviews" as any)}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.linkRowText}>⭐ My Reviews</Text>
+          <Text style={styles.linkRowChevron}>›</Text>
+        </TouchableOpacity>
+
         {/* Edit Profile Link */}
         <TouchableOpacity
           style={styles.editProfileBtn}
@@ -337,6 +411,64 @@ export default function AgentDashboard() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Reschedule modal */}
+      <Modal
+        visible={rescheduleTarget !== null}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setRescheduleTarget(null)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Propose a new time</Text>
+            <Text style={styles.modalSub}>
+              {rescheduleTarget?.buyerName || "The client"} will be notified of your proposed slot.
+            </Text>
+
+            <Text style={styles.modalLabel}>DATE</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.modalChipRow}>
+              {dateOptions.map((d) => (
+                <TouchableOpacity
+                  key={d.value}
+                  style={[styles.modalChip, rsDate === d.value && styles.modalChipActive]}
+                  onPress={() => { haptics.selection(); setRsDate(d.value); }}
+                >
+                  <Text style={[styles.modalChipText, rsDate === d.value && styles.modalChipTextActive]}>{d.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <Text style={styles.modalLabel}>TIME</Text>
+            <View style={styles.modalTimeGrid}>
+              {SLOT_TIMES.map((t) => (
+                <TouchableOpacity
+                  key={t}
+                  style={[styles.modalChip, rsTime === t && styles.modalChipActive]}
+                  onPress={() => { haptics.selection(); setRsTime(t); }}
+                >
+                  <Text style={[styles.modalChipText, rsTime === t && styles.modalChipTextActive]}>{t}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalCancel} onPress={() => setRescheduleTarget(null)} activeOpacity={0.8}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalSubmit, (!rsDate || !rsTime || rsSubmitting) && styles.modalSubmitDisabled]}
+                onPress={submitReschedule}
+                disabled={!rsDate || !rsTime || rsSubmitting}
+                activeOpacity={0.85}
+              >
+                {rsSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.modalSubmitText}>Send proposal</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -542,6 +674,36 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     borderColor: c.destructive + "44",
   },
   declineBtnText: { color: c.destructive, fontWeight: "700", fontSize: 14 },
+  rescheduleBtn: {
+    marginTop: 8,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: c.border,
+    backgroundColor: c.muted,
+  },
+  rescheduleBtnText: { color: c.foregroundSecondary, fontWeight: "700", fontSize: 14 },
+
+  // Reschedule modal
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  modalSheet: { backgroundColor: c.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36 },
+  modalHandle: { alignSelf: "center", width: 40, height: 5, borderRadius: 3, backgroundColor: c.border, marginBottom: 14 },
+  modalTitle: { fontSize: 20, fontWeight: "800", color: c.foreground },
+  modalSub: { fontSize: 14, color: c.mutedForeground, marginTop: 4, marginBottom: 12 },
+  modalLabel: { fontSize: 12, fontWeight: "700", color: c.mutedForeground, letterSpacing: 0.5, marginTop: 14, marginBottom: 8 },
+  modalChipRow: { gap: 8, paddingRight: 8 },
+  modalTimeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  modalChip: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, borderWidth: 1.5, borderColor: c.border, backgroundColor: c.card },
+  modalChipActive: { borderColor: c.primary, backgroundColor: c.primaryLight },
+  modalChipText: { color: c.foreground, fontWeight: "600", fontSize: 13 },
+  modalChipTextActive: { color: c.primary },
+  modalActions: { flexDirection: "row", gap: 12, marginTop: 24 },
+  modalCancel: { flex: 1, paddingVertical: 15, alignItems: "center", borderRadius: 12, borderWidth: 1, borderColor: c.border },
+  modalCancelText: { color: c.foregroundSecondary, fontWeight: "700", fontSize: 15 },
+  modalSubmit: { flex: 2, paddingVertical: 15, alignItems: "center", borderRadius: 12, backgroundColor: c.primary },
+  modalSubmitDisabled: { opacity: 0.45 },
+  modalSubmitText: { color: "#fff", fontWeight: "800", fontSize: 15 },
 
   messagesBtn: {
     backgroundColor: c.primary,
@@ -556,6 +718,21 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     elevation: 2,
   },
   messagesBtnText: { color: "#fff", fontWeight: "800", fontSize: 16 },
+
+  linkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: c.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: c.cardBorder,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    marginBottom: 10,
+  },
+  linkRowText: { color: c.foreground, fontWeight: "700", fontSize: 16 },
+  linkRowChevron: { color: c.mutedForeground, fontSize: 22, fontWeight: "300" },
 
   editProfileBtn: {
     backgroundColor: c.card,

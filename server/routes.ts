@@ -509,6 +509,20 @@ export async function registerRoutes(
     }
   });
 
+  // Agent's own reviews (so they can read what clients wrote)
+  app.get("/api/agent-portal/reviews", isAuthenticated, isAgent, async (req: any, res) => {
+    try {
+      const reviewList = await storage.getReviewsByAgent(req.agentProfile.id);
+      res.json({
+        reviews: reviewList,
+        averageRating: req.agentProfile.rating ?? 0,
+        total: reviewList.length,
+      });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch reviews" });
+    }
+  });
+
   // Agent's booking requests
   app.get("/api/agent-portal/bookings", isAuthenticated, isAgent, async (req: any, res) => {
     try {
