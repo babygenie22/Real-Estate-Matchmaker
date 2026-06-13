@@ -6,6 +6,7 @@ import {
 import { useRouter } from "expo-router";
 import SwipeCard from "@/components/SwipeCard";
 import { SkeletonCard } from "@/components/Skeleton";
+import { ActionButton } from "@/components/ActionButton";
 import { haptics } from "@/lib/haptics";
 import { api } from "@/lib/api";
 import { useTheme, type ThemeColors } from "@/lib/theme";
@@ -283,15 +284,9 @@ export default function DiscoverScreen() {
       {/* Action buttons */}
       {agents.length > 0 && (
         <View style={styles.actions}>
-          <TouchableOpacity style={[styles.actionBtn, styles.passBtn]} onPress={() => handlePass(topAgent)}>
-            <Text style={styles.actionEmoji}>✕</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.infoBtn} onPress={() => router.push(`/agent/${topAgent.id}`)}>
-            <Text style={styles.actionEmoji}>ℹ️</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionBtn, styles.likeBtn]} onPress={() => handleLike(topAgent)}>
-            <Text style={styles.actionEmoji}>💚</Text>
-          </TouchableOpacity>
+          <ActionButton variant="pass" onPress={() => handlePass(topAgent)} />
+          <ActionButton variant="info" onPress={() => { haptics.selection(); router.push(`/agent/${topAgent.id}`); }} />
+          <ActionButton variant="like" onPress={() => handleLike(topAgent)} />
         </View>
       )}
     </SafeAreaView>
@@ -395,22 +390,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     alignItems: "center",
     paddingBottom: 24,
     paddingTop: 16,
-    gap: 24,
+    gap: 28,
   },
-  actionBtn: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-  },
-  passBtn: { backgroundColor: c.card, borderWidth: 2, borderColor: c.destructive },
-  likeBtn: { backgroundColor: c.card, borderWidth: 2, borderColor: c.success },
-  infoBtn: { width: 56, height: 56, borderRadius: 28, backgroundColor: c.muted, justifyContent: "center", alignItems: "center" },
-  actionEmoji: { fontSize: 26 },
 });
