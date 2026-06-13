@@ -31,9 +31,10 @@ interface Booking {
   id: string | number;
   buyerName?: string;
   name?: string;
-  scheduledAt?: string;
-  date?: string;
-  time?: string;
+  proposedDate?: string;
+  proposedTime?: string;
+  confirmedDate?: string;
+  confirmedTime?: string;
   status: string;
 }
 
@@ -105,19 +106,11 @@ export default function AgentDashboard() {
   }
 
   function formatBookingTime(booking: Booking): string {
-    const raw = booking.scheduledAt || booking.date;
-    if (!raw) return booking.time || "Time TBD";
-    try {
-      const d = new Date(raw);
-      return d.toLocaleString(undefined, {
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-      });
-    } catch {
-      return raw;
-    }
+    // Confirmed slot wins over the buyer's originally proposed slot.
+    const date = booking.confirmedDate || booking.proposedDate;
+    const time = booking.confirmedTime || booking.proposedTime;
+    if (!date && !time) return "Time TBD";
+    return [date, time].filter(Boolean).join(" · ");
   }
 
   function statusColor(status: string): string {

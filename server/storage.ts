@@ -307,13 +307,24 @@ export class DatabaseStorage implements IStorage {
       .map(m => ({ ...m, agent: agentMap.get(m.agentId)!, lastMessage: lastMsgMap.get(m.id) }));
   }
 
-  async getMatchesByAgent(agentId: string): Promise<(Match & { user: User })[]> {
+  async getMatchesByAgent(agentId: string): Promise<(Match & { user: User; lastMessage?: Message })[]> {
     const agentMatches = await db.select().from(matches).where(eq(matches.agentId, agentId)).orderBy(desc(matches.createdAt));
     if (agentMatches.length === 0) return [];
     const userIds = Array.from(new Set(agentMatches.map(m => m.userId)));
     const userRows = await db.select().from(users).where(inArray(users.id, userIds));
     const userMap = new Map(userRows.map(u => [u.id, u]));
-    return agentMatches.filter(m => userMap.has(m.userId)).map(m => ({ ...m, user: userMap.get(m.userId)! }));
+
+    // Attach the most recent message per match (mirrors getMatchesByUser).
+    const matchIds = agentMatches.map(m => m.id);
+    const allMessages = await db.select().from(messages).where(inArray(messages.matchId, matchIds)).orderBy(desc(messages.createdAt));
+    const lastMsgMap = new Map<string, Message>();
+    for (const msg of allMessages) {
+      if (!lastMsgMap.has(msg.matchId)) lastMsgMap.set(msg.matchId, msg);
+    }
+
+    return agentMatches
+      .filter(m => userMap.has(m.userId))
+      .map(m => ({ ...m, user: userMap.get(m.userId)!, lastMessage: lastMsgMap.get(m.id) }));
   }
 
   async getMatch(id: string): Promise<Match | undefined> {
@@ -455,6 +466,12 @@ export class DatabaseStorage implements IStorage {
           sendBookingDeclinedEmail(user.email!, user.firstName || "", agent.name, agentNotes).catch(() => {})
         );
       }
+    } else if (status === "rescheduled") {
+      const dateStr = confirmedDate || updated.proposedDate;
+      const timeStr = confirmedTime || updated.proposedTime;
+      const body = `${agent?.name} proposed a new time: ${dateStr} at ${timeStr}.`;
+      await this.createNotification({ userId: updated.userId, type: "booking_update", title: "New Time Proposed 🔄", body, referenceId: id });
+      sendPushNotification(updated.userId, "New Time Proposed 🔄", body, { type: "booking_update", referenceId: id });
     }
 
     return updated;
@@ -490,6 +507,19 @@ export class DatabaseStorage implements IStorage {
     await db.update(agents)
       .set({ rating: Math.round(avg * 10) / 10, reviewCount: agentReviews.length })
       .where(eq(agents.id, review.agentId));
+
+    // Notify the agent of the new review (no-op for seeded agents without a user account).
+    try {
+      const agent = await this.getAgent(review.agentId);
+      if (agent?.userId) {
+        const stars = "★".repeat(Math.max(0, Math.min(5, Math.round(created.rating))));
+        const body = `You received a ${created.rating}-star review. ${stars}`;
+        await this.createNotification({ userId: agent.userId, type: "review", title: "New Review ⭐", body, referenceId: created.id });
+        sendPushNotification(agent.userId, "New Review ⭐", body, { type: "review", referenceId: created.id });
+      }
+    } catch (err) {
+      console.error("createReview notify error:", err);
+    }
     return created;
   }
 

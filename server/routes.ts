@@ -168,6 +168,12 @@ export async function registerRoutes(
     try {
       const userId = req.user.id;
       const data = insertReviewSchema.parse({ ...req.body, userId });
+      // Gate reviews: you can only review an agent you've actually matched with.
+      const userMatches = await storage.getMatchesByUser(userId);
+      const hasMatch = userMatches.some((m) => m.agentId === data.agentId);
+      if (!hasMatch) {
+        return res.status(403).json({ message: "You can only review agents you've matched with." });
+      }
       const existing = await storage.getReviewByUserAndAgent(userId, data.agentId);
       if (existing) return res.status(400).json({ message: "You have already reviewed this agent" });
       const review = await storage.createReview(data);
@@ -483,7 +489,21 @@ export async function registerRoutes(
   app.get("/api/agent-portal/matches", isAuthenticated, isAgent, async (req: any, res) => {
     try {
       const agentMatches = await storage.getMatchesByAgent(req.agentProfile.id);
-      res.json(agentMatches);
+      // Flatten into the shape the agent-portal screens render (buyer name/email + last message).
+      const payload = agentMatches.map((m) => {
+        const buyerName = [m.user.firstName, m.user.lastName].filter(Boolean).join(" ")
+          || m.user.email?.split("@")[0] || "Buyer";
+        return {
+          id: m.id,
+          user: m.user,
+          buyerName,
+          buyerEmail: m.user.email ?? "",
+          createdAt: m.createdAt,
+          lastMessage: m.lastMessage?.content ?? "",
+          lastMessageAt: m.lastMessage?.createdAt ?? m.createdAt,
+        };
+      });
+      res.json(payload);
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch matches" });
     }
@@ -493,7 +513,14 @@ export async function registerRoutes(
   app.get("/api/agent-portal/bookings", isAuthenticated, isAgent, async (req: any, res) => {
     try {
       const agentBookings = await storage.getBookingsByAgent(req.agentProfile.id);
-      res.json(agentBookings);
+      // Attach a flat buyer name so the dashboard can label each request.
+      const payload = agentBookings.map((b: any) => ({
+        ...b,
+        buyerName: [b.user?.firstName, b.user?.lastName].filter(Boolean).join(" ")
+          || b.user?.email?.split("@")[0] || "Buyer",
+        buyerEmail: b.user?.email ?? "",
+      }));
+      res.json(payload);
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch bookings" });
     }
