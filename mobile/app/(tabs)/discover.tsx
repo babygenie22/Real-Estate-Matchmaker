@@ -1,10 +1,10 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import {
   View, Text, TouchableOpacity, StyleSheet, SafeAreaView,
   Dimensions, ActivityIndicator, Alert, ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
-import SwipeCard from "@/components/SwipeCard";
+import SwipeCard, { type SwipeCardHandle } from "@/components/SwipeCard";
 import { SkeletonCard } from "@/components/Skeleton";
 import { ActionButton } from "@/components/ActionButton";
 import { haptics } from "@/lib/haptics";
@@ -57,6 +57,7 @@ export default function DiscoverScreen() {
   const [activeSpecialty, setActiveSpecialty] = useState("");
   const [activeArea, setActiveArea] = useState("");
   const [lastSwiped, setLastSwiped] = useState<{ agent: Agent; index: number } | null>(null);
+  const cardRef = useRef<SwipeCardHandle>(null);
   const router = useRouter();
 
   useEffect(() => { loadAgents(); }, [activeSpecialty, activeArea]);
@@ -261,6 +262,7 @@ export default function DiscoverScreen() {
             {/* Top swipeable card */}
             <SwipeCard
               key={topAgent.id}
+              ref={cardRef}
               agent={topAgent}
               isTop
               onLike={() => handleLike(topAgent)}
@@ -284,9 +286,9 @@ export default function DiscoverScreen() {
       {/* Action buttons */}
       {agents.length > 0 && (
         <View style={styles.actions}>
-          <ActionButton variant="pass" onPress={() => handlePass(topAgent)} />
+          <ActionButton variant="pass" onPress={() => cardRef.current?.swipe("left")} />
           <ActionButton variant="info" onPress={() => { haptics.selection(); router.push(`/agent/${topAgent.id}`); }} />
-          <ActionButton variant="like" onPress={() => handleLike(topAgent)} />
+          <ActionButton variant="like" onPress={() => cardRef.current?.swipe("right")} />
         </View>
       )}
     </SafeAreaView>

@@ -59,19 +59,17 @@ export function ActionButton({ variant, onPress }: { variant: Variant; onPress: 
       >
         {/* Subtle top-edge highlight on the filled button for depth */}
         {cfg.filled && <View style={[styles.gloss, { borderRadius: cfg.size / 2 }]} />}
-        <Text
-          style={[
-            styles.glyph,
-            {
-              fontSize: cfg.glyphSize,
-              color: cfg.glyphColor,
-              fontStyle: variant === "info" ? "italic" : "normal",
-              fontWeight: variant === "info" ? "800" : "700",
-            },
-          ]}
-        >
-          {cfg.glyph}
-        </Text>
+        {variant === "info" ? (
+          // Vector-style info mark (dot + rounded bar) — crisper than a glyph.
+          <View style={styles.infoMark}>
+            <View style={[styles.infoDot, { backgroundColor: cfg.glyphColor }]} />
+            <View style={[styles.infoBar, { backgroundColor: cfg.glyphColor }]} />
+          </View>
+        ) : (
+          <Text style={[styles.glyph, { fontSize: cfg.glyphSize, color: cfg.glyphColor }]}>
+            {cfg.glyph}
+          </Text>
+        )}
       </Animated.View>
     </Pressable>
   );
@@ -84,5 +82,8 @@ const styles = StyleSheet.create({
     top: 0, left: 0, right: 0, height: "55%",
     backgroundColor: "rgba(255,255,255,0.18)",
   },
-  glyph: { includeFontPadding: false, textAlign: "center" },
+  glyph: { includeFontPadding: false, textAlign: "center", fontWeight: "700" },
+  infoMark: { alignItems: "center", justifyContent: "center" },
+  infoDot: { width: 4.5, height: 4.5, borderRadius: 2.25, marginBottom: 3 },
+  infoBar: { width: 4, height: 13, borderRadius: 2 },
 });

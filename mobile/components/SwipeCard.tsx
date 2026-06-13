@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from "react";
+import React, { forwardRef, useImperativeHandle, useMemo, useRef } from "react";
 import {
   View, Text, Image, StyleSheet, Dimensions,
   PanResponder, Animated,
@@ -37,11 +37,31 @@ interface SwipeCardProps {
   isTop: boolean;
 }
 
-export default function SwipeCard({ agent, onLike, onPass, onPress, isTop }: SwipeCardProps) {
+export interface SwipeCardHandle {
+  swipe: (direction: "left" | "right") => void;
+}
+
+const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function SwipeCard(
+  { agent, onLike, onPass, onPress, isTop },
+  ref
+) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const position = useRef(new Animated.ValueXY()).current;
   const lastTap = useRef<number>(0);
+
+  // Programmatic fly-off so the action buttons animate the card off-screen
+  // (matching a real swipe) instead of making it vanish instantly.
+  function forceSwipe(direction: "left" | "right") {
+    const x = direction === "right" ? SCREEN_W * 1.5 : -SCREEN_W * 1.5;
+    Animated.timing(position, {
+      toValue: { x, y: 0 },
+      duration: 300,
+      useNativeDriver: false,
+    }).start(() => (direction === "right" ? onLike() : onPass()));
+  }
+
+  useImperativeHandle(ref, () => ({ swipe: forceSwipe }), [onLike, onPass]);
 
   const rotate = position.x.interpolate({
     inputRange: [-SCREEN_W / 2, 0, SCREEN_W / 2],
@@ -215,7 +235,9 @@ export default function SwipeCard({ agent, onLike, onPass, onPress, isTop }: Swi
       </View>
     </Animated.View>
   );
-}
+});
+
+export default SwipeCard;
 
 const makeStyles = (c: ThemeColors) => StyleSheet.create({
   card: {
