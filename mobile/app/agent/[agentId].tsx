@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  View, Text, Image, StyleSheet, ScrollView, TouchableOpacity,
-  SafeAreaView, Alert,
+  View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, Alert,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { api } from "@/lib/api";
 import { useTheme, type ThemeColors } from "@/lib/theme";
@@ -53,6 +53,7 @@ function formatPrice(n: number) {
 export default function AgentDetailScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
   const { agentId } = useLocalSearchParams<{ agentId: string }>();
   const [agent, setAgent] = useState<Agent | null>(null);
   const [reviews, setReviews] = useState<any[]>([]);
@@ -85,8 +86,8 @@ export default function AgentDetailScreen() {
 
   if (loading || !agent) {
     return (
-      <SafeAreaView style={styles.container}>
-        <Skeleton width="100%" height={320} radius={0} />
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <Skeleton width="100%" height={300} radius={0} />
         <View style={styles.body}>
           <Skeleton width="55%" height={28} />
           <View style={styles.skeletonStatsRow}>
@@ -97,44 +98,41 @@ export default function AgentDetailScreen() {
           <Skeleton width="100%" height={16} style={{ marginTop: 8 }} />
           <Skeleton width="100%" height={16} style={{ marginTop: 10 }} />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   const photoUri = agent.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&size=512&background=dbeafe&color=2563eb`;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
         {/* Hero photo */}
         <View style={styles.hero}>
           <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
-          {/* Gradient scrim (stacked translucent bands → guarantees legible text on any photo) */}
-          <View pointerEvents="none" style={styles.scrim}>
-            <View style={[styles.scrimBand, { backgroundColor: "rgba(0,0,0,0.0)" }]} />
-            <View style={[styles.scrimBand, { backgroundColor: "rgba(0,0,0,0.18)" }]} />
-            <View style={[styles.scrimBand, { backgroundColor: "rgba(0,0,0,0.42)" }]} />
-            <View style={[styles.scrimBand, { backgroundColor: "rgba(0,0,0,0.68)" }]} />
-          </View>
-          <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()}>
+          {/* Floating controls (hero starts below the status bar, so 8px is clear) */}
+          <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()} hitSlop={8}>
             <Text style={styles.closeBtnText}>✕</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.saveBtn, saved && styles.saveBtnActive]}
             onPress={() => { haptics.light(); toggleFavorite(agent as any); }}
             activeOpacity={0.8}
+            hitSlop={8}
           >
             <Text style={styles.saveBtnText}>{saved ? "🔖" : "♡"}</Text>
           </TouchableOpacity>
-          <View style={styles.heroInfo}>
-            <View style={styles.heroNameRow}>
-              <Text style={styles.heroName}>{agent.name}</Text>
-              {isVerified(agent) && <VerifiedBadge />}
-            </View>
-            {agent.rating != null && (
-              <Text style={styles.heroRating}>⭐ {agent.rating.toFixed(1)}  ({agent.reviewCount} reviews)</Text>
-            )}
+        </View>
+
+        {/* Name + rating in a clean section below the photo */}
+        <View style={styles.heroInfo}>
+          <View style={styles.heroNameRow}>
+            <Text style={styles.heroName} numberOfLines={1}>{agent.name}</Text>
+            {isVerified(agent) && <VerifiedBadge />}
           </View>
+          {agent.rating != null && (
+            <Text style={styles.heroRating}>⭐ {agent.rating.toFixed(1)}  ({agent.reviewCount} reviews)</Text>
+          )}
         </View>
 
         <View style={styles.body}>
@@ -244,12 +242,12 @@ export default function AgentDetailScreen() {
       </ScrollView>
 
       {/* CTA */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
         <TouchableOpacity style={styles.bookBtn} onPress={() => router.push(`/booking/${agent.id}`)}>
           <Text style={styles.bookBtnText}>📅 Book Consultation</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -257,20 +255,23 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: c.background },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   skeletonStatsRow: { flexDirection: "row", gap: 8, marginTop: 16, marginBottom: 4 },
-  hero: { position: "relative", height: 340 },
+  hero: { position: "relative", height: 320, backgroundColor: c.muted },
   photo: { width: "100%", height: "100%" },
-  scrim: { position: "absolute", left: 0, right: 0, bottom: 0, height: 200, flexDirection: "column" },
-  scrimBand: { flex: 1 },
-  closeBtn: { position: "absolute", top: 16, right: 16, width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
+  closeBtn: { position: "absolute", top: 12, right: 16, width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
   closeBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
-  saveBtn: { position: "absolute", top: 16, right: 60, width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
+  saveBtn: { position: "absolute", top: 12, right: 62, width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
   saveBtnActive: { backgroundColor: c.primary },
   saveBtnText: { color: "#fff", fontSize: 18, fontWeight: "700" },
-  heroInfo: { position: "absolute", bottom: 0, left: 0, right: 0, padding: 20 },
+  heroInfo: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 4,
+    backgroundColor: c.background,
+  },
   heroNameRow: { flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" },
-  heroName: { fontSize: 24, fontWeight: "800", color: "#fff", textShadowColor: "rgba(0,0,0,0.55)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
-  heroRating: { fontSize: 14, color: "rgba(255,255,255,0.92)", marginTop: 4, textShadowColor: "rgba(0,0,0,0.55)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
-  body: { padding: 20 },
+  heroName: { fontSize: 24, fontWeight: "800", color: c.foreground, letterSpacing: -0.3 },
+  heroRating: { fontSize: 14, color: c.mutedForeground, marginTop: 4 },
+  body: { paddingHorizontal: 20, paddingTop: 16 },
   // flexBasis 23% keeps one row on regular phones but wraps to a 2x2 grid on
   // narrow screens (iPhone SE) instead of truncating the labels.
   statsRow: { flexDirection: "row", flexWrap: "wrap", borderRadius: 14, backgroundColor: c.muted, padding: 16, marginBottom: 20, gap: 8 },
