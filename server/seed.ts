@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 const seedAgents = [
   {
     name: "Sarah Mitchell",
-    photo: "https://randomuser.me/api/portraits/women/68.jpg",
+    photo: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=800&h=800&fit=crop&crop=faces&q=80",
     bio: "With over 15 years in Metro Detroit luxury real estate, I bring unmatched market knowledge and a personal touch to every transaction. I specialize in helping families find their forever homes in Birmingham, Bloomfield Hills, and the Grosse Pointes.",
     licenseNumber: "MI-6501234567",
     specialties: ["Luxury Homes", "First-Time Buyers", "Relocation"],
@@ -25,7 +25,7 @@ const seedAgents = [
   },
   {
     name: "Michael Torres",
-    photo: "https://randomuser.me/api/portraits/men/75.jpg",
+    photo: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=800&h=800&fit=crop&crop=faces&q=80",
     bio: "Top producer in Metro Detroit for 10 consecutive years, I've closed over $200M in transactions. My deep network and negotiation expertise ensure my clients always get the best deal. Former mortgage banker — I understand the financial side inside and out.",
     licenseNumber: "MI-6502345678",
     specialties: ["Investment Properties", "Commercial", "Multi-Family"],
@@ -45,7 +45,7 @@ const seedAgents = [
   },
   {
     name: "Priya Sharma",
-    photo: "https://randomuser.me/api/portraits/women/44.jpg",
+    photo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=800&h=800&fit=crop&crop=faces&q=80",
     bio: "I'm passionate about helping first-time buyers navigate Ann Arbor's competitive market. With a background in urban planning, I offer unique insights into neighborhood potential and long-term value. Let's find your perfect Michigan home together!",
     licenseNumber: "MI-6503456789",
     specialties: ["First-Time Buyers", "New Construction", "Condos"],
@@ -65,7 +65,7 @@ const seedAgents = [
   },
   {
     name: "James Washington",
-    photo: "https://randomuser.me/api/portraits/men/32.jpg",
+    photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=800&h=800&fit=crop&crop=faces&q=80",
     bio: "A Detroit native with 20+ years of experience, I know every neighborhood like the back of my hand — from Midtown's historic homes to Royal Oak's thriving corridor. I help clients find properties that fit their lifestyle and budget perfectly.",
     licenseNumber: "MI-6504567890",
     specialties: ["Urban Properties", "Historic Homes", "Multi-Family"],
@@ -85,7 +85,7 @@ const seedAgents = [
   },
   {
     name: "Emily Chen",
-    photo: "https://randomuser.me/api/portraits/women/90.jpg",
+    photo: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=800&h=800&fit=crop&crop=faces&q=80",
     bio: "Tech-forward realtor serving Oakland County's premier suburbs. I leverage data analytics and 3D virtual tours to give clients an edge in competitive situations. Specializing in helping corporate relocations land in Troy, Novi, and Farmington Hills.",
     licenseNumber: "MI-6505678901",
     specialties: ["Relocation", "New Construction", "Luxury Homes"],

@@ -107,7 +107,7 @@ function MatchCard({ match }: { match: Match }) {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const agent = match.agent;
-  const avatarUri = agent.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&size=120&background=dbeafe&color=2563eb`;
+  const avatarUri = agent.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&size=256&background=dbeafe&color=2563eb`;
 
   return (
     <TouchableOpacity style={styles.card} onPress={() => router.push(`/chat/${match.id}`)} activeOpacity={0.85}>

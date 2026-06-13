@@ -136,7 +136,7 @@ export default function CompareScreen() {
         {/* Scrollable agent columns */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.colsRow}>
           {agents.map((agent, colIdx) => {
-            const avatarUri = agent.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&size=120&background=dbeafe&color=2563eb`;
+            const avatarUri = agent.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&size=256&background=dbeafe&color=2563eb`;
             return (
               <View key={agent.id} style={styles.agentCol}>
                 <View style={styles.colHeader}>

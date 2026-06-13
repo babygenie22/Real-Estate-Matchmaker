@@ -148,7 +148,7 @@ export default function ReviewScreen() {
 
   const photoUri =
     booking.agent.photo ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(booking.agent.name)}&size=200&background=dbeafe&color=2563eb`;
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(booking.agent.name)}&size=256&background=dbeafe&color=2563eb`;
 
   return (
     <SafeAreaView style={styles.container}>

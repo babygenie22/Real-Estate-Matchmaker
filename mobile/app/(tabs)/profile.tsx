@@ -70,7 +70,7 @@ function BookingCard({
 }) {
   const photoUri =
     booking.agent.photo ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(booking.agent.name)}&size=60&background=dbeafe&color=2563eb`;
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(booking.agent.name)}&size=128&background=dbeafe&color=2563eb`;
   const showReviewBtn = onLeaveReview && booking.status.toLowerCase() === "confirmed";
 
   return (

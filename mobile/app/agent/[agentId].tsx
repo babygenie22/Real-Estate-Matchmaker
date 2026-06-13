@@ -101,7 +101,7 @@ export default function AgentDetailScreen() {
     );
   }
 
-  const photoUri = agent.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&size=400&background=dbeafe&color=2563eb`;
+  const photoUri = agent.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&size=512&background=dbeafe&color=2563eb`;
 
   return (
     <SafeAreaView style={styles.container}>

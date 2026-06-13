@@ -120,7 +120,7 @@ export default function SwipeCard({ agent, onLike, onPass, onPress, isTop }: Swi
 
   const photoUri =
     agent.photo ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&size=400&background=dbeafe&color=2563eb`;
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&size=512&background=dbeafe&color=2563eb`;
 
   return (
     <Animated.View

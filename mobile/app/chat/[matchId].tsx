@@ -183,7 +183,7 @@ export default function ChatScreen() {
       {peer && (
         <View style={styles.agentBar}>
           <Image
-            source={{ uri: peer.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(peer.name)}&size=80&background=dbeafe&color=2563eb` }}
+            source={{ uri: peer.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(peer.name)}&size=160&background=dbeafe&color=2563eb` }}
             style={styles.agentAvatar}
           />
           <View style={styles.agentBarInfo}>

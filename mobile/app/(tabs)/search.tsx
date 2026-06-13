@@ -240,7 +240,7 @@ function BrowseCard({
 }) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const avatarUri = agent.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&size=120&background=dbeafe&color=2563eb`;
+  const avatarUri = agent.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&size=256&background=dbeafe&color=2563eb`;
   const price = agent.priceRangeMin && agent.priceRangeMax
     ? `${formatPrice(agent.priceRangeMin)}–${formatPrice(agent.priceRangeMax)}`
     : "";
