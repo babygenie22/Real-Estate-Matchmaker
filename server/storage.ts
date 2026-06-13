@@ -62,7 +62,7 @@ export interface IStorage {
   getScoredAgents(userId: string, filters?: AgentFilters): Promise<(Agent & { matchScore: number })[]>;
   getAgentByUserId(userId: string): Promise<Agent | undefined>;
 
-  createLike(like: InsertLike): Promise<Like>;
+  createLike(like: InsertLike): Promise<Like & { matchId?: string; agentName?: string }>;
   getLikesByUser(userId: string): Promise<Like[]>;
   resetLikesByUser(userId: string): Promise<void>;
 
@@ -233,16 +233,20 @@ export class DatabaseStorage implements IStorage {
     return scored.sort((a, b) => b.matchScore - a.matchScore);
   }
 
-  async createLike(like: InsertLike): Promise<Like> {
+  async createLike(like: InsertLike): Promise<Like & { matchId?: string; agentName?: string }> {
     // Idempotent: return the existing like if already recorded
     const [existing] = await db.select().from(likes)
       .where(and(eq(likes.userId, like.userId), eq(likes.agentId, like.agentId)));
     if (existing) return existing;
     const [created] = await db.insert(likes).values(like as any).returning();
+    let matchId: string | undefined;
+    let agentName: string | undefined;
     if (like.liked) {
       const match = await this.createMatch({ userId: like.userId, agentId: like.agentId });
       const agent = await this.getAgent(like.agentId);
       const user = await this.getUser(like.userId);
+      matchId = match.id;
+      agentName = agent?.name;
       const msg = `You matched with ${agent?.name || "an agent"}. Start chatting!`;
       sendPushNotification(like.userId, "New Match! 🎉", msg, { type: "match", referenceId: match.id });
       await this.createNotification({ userId: like.userId, type: "match", title: "New Match! 🎉", body: msg, referenceId: match.id });
@@ -270,7 +274,7 @@ export class DatabaseStorage implements IStorage {
         }
       }
     }
-    return created;
+    return { ...created, matchId, agentName };
   }
 
   async getLikesByUser(userId: string): Promise<Like[]> {

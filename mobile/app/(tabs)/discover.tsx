@@ -7,6 +7,7 @@ import { useRouter } from "expo-router";
 import SwipeCard, { type SwipeCardHandle } from "@/components/SwipeCard";
 import { SkeletonCard } from "@/components/Skeleton";
 import { ActionButton } from "@/components/ActionButton";
+import { MatchToast, type MatchInfo } from "@/components/MatchToast";
 import { haptics } from "@/lib/haptics";
 import { api } from "@/lib/api";
 import { useTheme, type ThemeColors } from "@/lib/theme";
@@ -57,6 +58,7 @@ export default function DiscoverScreen() {
   const [activeSpecialty, setActiveSpecialty] = useState("");
   const [activeArea, setActiveArea] = useState("");
   const [lastSwiped, setLastSwiped] = useState<{ agent: Agent; index: number } | null>(null);
+  const [matchToast, setMatchToast] = useState<MatchInfo | null>(null);
   const cardRef = useRef<SwipeCardHandle>(null);
   const router = useRouter();
 
@@ -82,7 +84,8 @@ export default function DiscoverScreen() {
     setLastSwiped({ agent, index: agents.length });
     setAgents((prev) => prev.filter((a) => a.id !== agent.id));
     try {
-      await api.post("/api/likes", { agentId: agent.id, liked: true });
+      const res = await api.post<{ matchId?: string; agentName?: string }>("/api/likes", { agentId: agent.id, liked: true });
+      if (res?.matchId) setMatchToast({ matchId: res.matchId, agentName: res.agentName || agent.name });
     } catch {}
   }, [agents.length]);
 
@@ -206,6 +209,13 @@ export default function DiscoverScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Match celebration toast (non-blocking, taps through to chat) */}
+      <MatchToast
+        match={matchToast}
+        onDismiss={() => setMatchToast(null)}
+        onOpen={(id) => { setMatchToast(null); router.push(`/chat/${id}`); }}
+      />
+
       {/* Header */}
       {Header}
 
