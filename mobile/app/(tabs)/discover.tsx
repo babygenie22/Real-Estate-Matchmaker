@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import {
   View, Text, TouchableOpacity, StyleSheet, SafeAreaView,
-  Dimensions, ActivityIndicator, Alert, ScrollView,
+  ActivityIndicator, Alert, ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
-import SwipeCard, { type SwipeCardHandle } from "@/components/SwipeCard";
+import SwipeCard, { type SwipeCardHandle, CARD_W, CARD_H } from "@/components/SwipeCard";
 import { SkeletonCard } from "@/components/Skeleton";
 import { ActionButton } from "@/components/ActionButton";
 import { MatchToast, type MatchInfo } from "@/components/MatchToast";
@@ -12,9 +12,6 @@ import { haptics } from "@/lib/haptics";
 import { api } from "@/lib/api";
 import { useTheme, type ThemeColors } from "@/lib/theme";
 
-const { width: SCREEN_W } = Dimensions.get("window");
-const CARD_W = SCREEN_W - 32;
-const CARD_H = CARD_W * 1.38; // matches SwipeCard so skeleton → card has no size jump
 
 interface Agent {
   id: string;

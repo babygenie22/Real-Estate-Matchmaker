@@ -7,9 +7,12 @@ import { useTheme, type ThemeColors } from "@/lib/theme";
 import { VerifiedBadge, isVerified } from "@/components/VerifiedBadge";
 import { haptics } from "@/lib/haptics";
 
-const { width: SCREEN_W } = Dimensions.get("window");
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 export const CARD_W = SCREEN_W - 32;
-export const CARD_H = CARD_W * 1.38;
+// Prefer the 1.38 portrait ratio, but cap the height so the card always fits
+// between the filter chips and the action buttons (≈340pt of fixed chrome) —
+// otherwise on shorter phones it overflows and overlaps them.
+export const CARD_H = Math.min(CARD_W * 1.38, SCREEN_H - 340);
 const SWIPE_THRESHOLD = SCREEN_W * 0.28;
 
 interface Agent {
