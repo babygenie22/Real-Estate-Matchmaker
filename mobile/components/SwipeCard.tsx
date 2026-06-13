@@ -149,7 +149,7 @@ const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function SwipeCard
       style={[
         styles.card,
         behind
-          ? { transform: [{ scale: 0.92 }, { translateY: 44 }], opacity: 0.7 }
+          ? { transform: [{ scale: 0.9 }, { translateY: 54 }], opacity: 0.65 }
           : {
               transform: [
                 { translateX: position.x },
