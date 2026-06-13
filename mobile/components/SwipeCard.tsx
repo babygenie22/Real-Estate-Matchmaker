@@ -149,7 +149,7 @@ const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function SwipeCard
       style={[
         styles.card,
         behind
-          ? { transform: [{ scale: 0.9 }, { translateY: 54 }], opacity: 0.65 }
+          ? { transform: [{ scale: 0.94 }, { translateY: 22 }], opacity: 0.7 }
           : {
               transform: [
                 { translateX: position.x },
@@ -160,24 +160,23 @@ const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function SwipeCard
       ]}
       {...(isTop && !behind ? panResponder.panHandlers : {})}
     >
-      <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
+      {/* Photo (top) */}
+      <View style={styles.photoWrap}>
+        <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
 
-      {/* Shadow overlays */}
-      <View style={styles.gradientTopFade} />
-      <View style={styles.gradientBottomFade} />
+        {/* LIKE stamp */}
+        <Animated.View style={[styles.stamp, styles.likeStamp, { opacity: likeOpacity }]}>
+          <Text style={styles.likeStampText}>LIKE 💚</Text>
+        </Animated.View>
 
-      {/* LIKE stamp */}
-      <Animated.View style={[styles.stamp, styles.likeStamp, { opacity: likeOpacity }]}>
-        <Text style={styles.likeStampText}>LIKE 💚</Text>
-      </Animated.View>
+        {/* PASS stamp */}
+        <Animated.View style={[styles.stamp, styles.passStamp, { opacity: passOpacity }]}>
+          <Text style={styles.passStampText}>PASS ✕</Text>
+        </Animated.View>
+      </View>
 
-      {/* PASS stamp */}
-      <Animated.View style={[styles.stamp, styles.passStamp, { opacity: passOpacity }]}>
-        <Text style={styles.passStampText}>PASS ✕</Text>
-      </Animated.View>
-
-      {/* Info overlay */}
-      <View style={styles.infoOverlay}>
+      {/* Info (below the photo, on the card surface) */}
+      <View style={styles.infoSection}>
         <View style={styles.nameRow}>
           <Text style={styles.name} numberOfLines={1}>{agent.name}</Text>
           {isVerified(agent) && <VerifiedBadge size="sm" />}
@@ -193,8 +192,12 @@ const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function SwipeCard
             <Text style={styles.ratingStar}>⭐</Text>
             <Text style={styles.ratingVal}>{agent.rating.toFixed(1)}</Text>
             <Text style={styles.ratingCount}>({agent.reviewCount})</Text>
-            <Text style={styles.ratingDot}>·</Text>
-            <Text style={styles.ratingDeals}>{agent.transactionCount} deals</Text>
+            {agent.transactionCount != null && (
+              <>
+                <Text style={styles.ratingDot}>·</Text>
+                <Text style={styles.ratingDeals}>{agent.transactionCount} deals</Text>
+              </>
+            )}
           </View>
         )}
 
@@ -257,23 +260,12 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     elevation: 10,
     position: "absolute",
   },
-  photo: { position: "absolute", width: "100%", height: "100%" },
-  gradientTopFade: {
-    position: "absolute",
-    top: 0, left: 0, right: 0,
-    height: "30%",
-    backgroundColor: "rgba(0,0,0,0.18)",
-  },
-  gradientBottomFade: {
-    position: "absolute",
-    bottom: 0, left: 0, right: 0,
-    height: "60%",
-    backgroundColor: "rgba(0,0,0,0.72)",
-  },
+  photoWrap: { width: "100%", height: "60%", backgroundColor: c.muted },
+  photo: { width: "100%", height: "100%" },
 
   stamp: {
     position: "absolute",
-    top: 44,
+    top: 28,
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 10,
@@ -285,58 +277,53 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   likeStampText: { color: c.like, fontWeight: "900", fontSize: 22, letterSpacing: 1.5, textShadowColor: "rgba(0,0,0,0.5)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
   passStampText: { color: c.pass, fontWeight: "900", fontSize: 22, letterSpacing: 1.5, textShadowColor: "rgba(0,0,0,0.5)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
 
-  infoOverlay: {
-    position: "absolute",
-    bottom: 0, left: 0, right: 0,
-    padding: 20,
-    paddingBottom: 22,
-    gap: 6,
+  infoSection: {
+    flex: 1,
+    backgroundColor: c.card,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    gap: 7,
+    justifyContent: "center",
   },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  name: { fontSize: 24, fontWeight: "800", color: "#fff", flex: 1, letterSpacing: -0.3 },
+  name: { fontSize: 22, fontWeight: "800", color: c.foreground, flex: 1, letterSpacing: -0.3 },
   expBadge: {
     backgroundColor: c.primary,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    shadowColor: c.primary,
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
   },
   expText: { color: "#fff", fontSize: 11, fontWeight: "800" },
 
   ratingRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   ratingStar: { fontSize: 13 },
-  ratingVal: { fontSize: 14, fontWeight: "700", color: "#fff" },
-  ratingCount: { fontSize: 12, color: "rgba(255,255,255,0.65)" },
-  ratingDot: { fontSize: 12, color: "rgba(255,255,255,0.4)" },
-  ratingDeals: { fontSize: 12, color: "rgba(255,255,255,0.65)" },
+  ratingVal: { fontSize: 14, fontWeight: "700", color: c.foreground },
+  ratingCount: { fontSize: 12, color: c.mutedForeground },
+  ratingDot: { fontSize: 12, color: c.mutedForeground },
+  ratingDeals: { fontSize: 12, color: c.mutedForeground },
 
-  areas: { fontSize: 12, color: "rgba(255,255,255,0.75)" },
+  areas: { fontSize: 12.5, color: c.mutedForeground },
 
   statsRow: { flexDirection: "row", gap: 8, marginTop: 2 },
   statChip: {
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: c.muted,
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 6,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-    minWidth: 60,
+    borderColor: c.cardBorder,
+    minWidth: 62,
   },
-  statVal: { color: "#fff", fontSize: 13, fontWeight: "800" },
-  statLabel: { color: "rgba(255,255,255,0.6)", fontSize: 10, fontWeight: "500", marginTop: 1 },
+  statVal: { color: c.foreground, fontSize: 13, fontWeight: "800" },
+  statLabel: { color: c.mutedForeground, fontSize: 10, fontWeight: "500", marginTop: 1 },
 
   tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 2 },
   tag: {
-    backgroundColor: "rgba(255,255,255,0.14)",
+    backgroundColor: c.primaryLight,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
   },
-  tagText: { color: "rgba(255,255,255,0.9)", fontSize: 11, fontWeight: "600" },
+  tagText: { color: c.primary, fontSize: 11, fontWeight: "600" },
 });
