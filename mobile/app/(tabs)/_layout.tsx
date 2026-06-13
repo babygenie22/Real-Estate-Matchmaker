@@ -94,6 +94,10 @@ export default function TabsLayout() {
         options={{ title: "Discover", tabBarIcon: ({ focused }) => <TabIcon emoji="🔥" focused={focused} /> }}
       />
       <Tabs.Screen
+        name="search"
+        options={{ title: "Browse", tabBarIcon: ({ focused }) => <TabIcon emoji="🔍" focused={focused} /> }}
+      />
+      <Tabs.Screen
         name="matches"
         options={{
           title: "Matches",

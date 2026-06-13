@@ -1,0 +1,322 @@
+import { useEffect, useMemo, useState, useCallback } from "react";
+import {
+  View, Text, TextInput, FlatList, TouchableOpacity, Image, StyleSheet,
+  SafeAreaView, ScrollView, RefreshControl,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { api } from "@/lib/api";
+import { SkeletonRow } from "@/components/Skeleton";
+import { VerifiedBadge, isVerified } from "@/components/VerifiedBadge";
+import { useFavorites, FavoriteAgent } from "@/lib/favorites";
+import { haptics } from "@/lib/haptics";
+import { useTheme, type ThemeColors } from "@/lib/theme";
+
+type Agent = FavoriteAgent;
+
+const SPECIALTIES = ["First-Time Buyers", "Luxury Homes", "Investment", "New Construction", "Relocation"];
+const AREAS = ["Metro Detroit", "Ann Arbor", "Grand Rapids", "Lansing", "Oakland County"];
+
+type SortKey = "rating" | "deals" | "experience" | "fastest";
+const SORTS: { key: SortKey; label: string }[] = [
+  { key: "rating", label: "Top rated" },
+  { key: "deals", label: "Most deals" },
+  { key: "experience", label: "Experience" },
+  { key: "fastest", label: "Fastest sales" },
+];
+
+function formatPrice(n?: number | null) {
+  if (n == null) return "";
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${Math.round(n / 1_000)}K`;
+  return `$${n}`;
+}
+
+export default function SearchScreen() {
+  const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { isFavorite, toggleFavorite } = useFavorites();
+
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const [query, setQuery] = useState("");
+  const [specialty, setSpecialty] = useState("");
+  const [area, setArea] = useState("");
+  const [sort, setSort] = useState<SortKey>("rating");
+
+  async function load() {
+    try {
+      // Browse mode returns all approved agents; we filter/sort client-side for instant feedback.
+      const data = await api.get<Agent[]>("/api/agents?browse=true");
+      setAgents(Array.isArray(data) ? data : []);
+    } catch {
+      // empty state handles failure
+    }
+  }
+
+  useEffect(() => {
+    load().finally(() => setLoading(false));
+  }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, []);
+
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    let list = agents.filter((a) => {
+      if (q) {
+        const hay = [a.name, a.bio, ...(a.serviceAreas ?? []), ...(a.specialties ?? [])]
+          .filter(Boolean).join(" ").toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      if (specialty && !(a.specialties ?? []).some((s) => s === specialty)) return false;
+      if (area && !(a.serviceAreas ?? []).some((s) => s === area)) return false;
+      return true;
+    });
+    list = [...list].sort((a, b) => {
+      switch (sort) {
+        case "deals": return (b.transactionCount ?? 0) - (a.transactionCount ?? 0);
+        case "experience": return (b.yearsExperience ?? 0) - (a.yearsExperience ?? 0);
+        case "fastest": return (a.avgDaysOnMarket ?? 9999) - (b.avgDaysOnMarket ?? 9999);
+        case "rating":
+        default: return (b.rating ?? 0) - (a.rating ?? 0);
+      }
+    });
+    return list;
+  }, [agents, query, specialty, area, sort]);
+
+  const filtersActive = query !== "" || specialty !== "" || area !== "";
+
+  function clearFilters() {
+    haptics.selection();
+    setQuery(""); setSpecialty(""); setArea("");
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Browse Agents</Text>
+        <View style={styles.searchBar}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by name, area, or specialty"
+            placeholderTextColor={colors.mutedForeground}
+            value={query}
+            onChangeText={setQuery}
+            autoCorrect={false}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+        </View>
+      </View>
+
+      {/* Specialty filters */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll} contentContainerStyle={styles.chipRow}>
+        {[{ label: "All specialties", value: "" }, ...SPECIALTIES.map((s) => ({ label: s, value: s }))].map((f) => {
+          const active = specialty === f.value;
+          return (
+            <TouchableOpacity key={f.value || "all-sp"} style={[styles.chip, active && styles.chipActive]}
+              onPress={() => { haptics.selection(); setSpecialty(f.value); }} activeOpacity={0.7}>
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>{f.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* Area filters */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll} contentContainerStyle={styles.chipRow}>
+        {[{ label: "All areas", value: "" }, ...AREAS.map((s) => ({ label: s, value: s }))].map((f) => {
+          const active = area === f.value;
+          return (
+            <TouchableOpacity key={f.value || "all-ar"} style={[styles.chip, active && styles.chipActive]}
+              onPress={() => { haptics.selection(); setArea(f.value); }} activeOpacity={0.7}>
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>{f.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* Sort + count */}
+      <View style={styles.sortRow}>
+        <Text style={styles.count}>
+          {loading ? "Loading…" : `${results.length} agent${results.length === 1 ? "" : "s"}`}
+        </Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sortChips}>
+          {SORTS.map((s) => {
+            const active = sort === s.key;
+            return (
+              <TouchableOpacity key={s.key} style={[styles.sortChip, active && styles.sortChipActive]}
+                onPress={() => { haptics.selection(); setSort(s.key); }} activeOpacity={0.7}>
+                <Text style={[styles.sortChipText, active && styles.sortChipTextActive]}>{s.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {loading ? (
+        <View style={styles.list}>
+          {Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}
+        </View>
+      ) : results.length === 0 ? (
+        <View style={styles.empty}>
+          <Text style={styles.emptyEmoji}>🔍</Text>
+          <Text style={styles.emptyTitle}>No agents found</Text>
+          <Text style={styles.emptySub}>
+            {filtersActive ? "Try removing a filter or searching a different term." : "Check back soon — new agents join regularly."}
+          </Text>
+          {filtersActive && (
+            <TouchableOpacity style={styles.clearBtn} onPress={clearFilters} activeOpacity={0.85}>
+              <Text style={styles.clearBtnText}>Clear filters</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      ) : (
+        <FlatList
+          data={results}
+          keyExtractor={(a) => a.id}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          keyboardDismissMode="on-drag"
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+          renderItem={({ item }) => (
+            <BrowseCard
+              agent={item}
+              saved={isFavorite(item.id)}
+              onPress={() => router.push(`/agent/${item.id}`)}
+              onToggleSave={() => { haptics.light(); toggleFavorite(item); }}
+            />
+          )}
+        />
+      )}
+    </SafeAreaView>
+  );
+}
+
+function BrowseCard({
+  agent, saved, onPress, onToggleSave,
+}: {
+  agent: Agent;
+  saved: boolean;
+  onPress: () => void;
+  onToggleSave: () => void;
+}) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const avatarUri = agent.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&size=120&background=dbeafe&color=2563eb`;
+  const price = agent.priceRangeMin && agent.priceRangeMax
+    ? `${formatPrice(agent.priceRangeMin)}–${formatPrice(agent.priceRangeMax)}`
+    : "";
+
+  return (
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
+      <Image source={{ uri: avatarUri }} style={styles.avatar} />
+      <View style={styles.info}>
+        <View style={styles.nameRow}>
+          <Text style={styles.name} numberOfLines={1}>{agent.name}</Text>
+          {isVerified(agent) && <VerifiedBadge size="sm" />}
+        </View>
+        <View style={styles.ratingRow}>
+          <Text style={styles.star}>⭐</Text>
+          <Text style={styles.ratingText}>{agent.rating?.toFixed(1) ?? "—"}</Text>
+          <Text style={styles.ratingCount}>({agent.reviewCount ?? 0})</Text>
+          {agent.transactionCount != null && (
+            <><Text style={styles.dot}>·</Text><Text style={styles.metaText}>{agent.transactionCount} deals</Text></>
+          )}
+          {agent.yearsExperience != null && (
+            <><Text style={styles.dot}>·</Text><Text style={styles.metaText}>{agent.yearsExperience}yr</Text></>
+          )}
+        </View>
+        {agent.serviceAreas && agent.serviceAreas.length > 0 && (
+          <Text style={styles.areas} numberOfLines={1}>📍 {agent.serviceAreas.slice(0, 2).join(", ")}</Text>
+        )}
+        {price ? <Text style={styles.price}>🏷️ {price}</Text> : null}
+        {agent.specialties && agent.specialties.length > 0 && (
+          <View style={styles.tagRow}>
+            {agent.specialties.slice(0, 3).map((s) => (
+              <View key={s} style={styles.tag}><Text style={styles.tagText}>{s}</Text></View>
+            ))}
+          </View>
+        )}
+      </View>
+      <TouchableOpacity
+        style={[styles.saveBtn, saved && styles.saveBtnOn]}
+        onPress={onToggleSave}
+        activeOpacity={0.7}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
+        <Text style={[styles.saveBtnText, saved && styles.saveBtnTextOn]}>{saved ? "🔖" : "♡"}</Text>
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+}
+
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.surface },
+  header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8, backgroundColor: c.background },
+  title: { fontSize: 26, fontWeight: "900", color: c.foreground, marginBottom: 12 },
+  searchBar: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    backgroundColor: c.muted, borderRadius: 12, paddingHorizontal: 14, height: 46,
+  },
+  searchIcon: { fontSize: 16 },
+  searchInput: { flex: 1, fontSize: 16, color: c.foreground },
+  chipScroll: { flexGrow: 0, backgroundColor: c.background },
+  chipRow: { paddingHorizontal: 16, paddingVertical: 6, gap: 8, flexDirection: "row" },
+  chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: c.background, borderWidth: 1.5, borderColor: c.border },
+  chipActive: { backgroundColor: c.primary, borderColor: c.primary },
+  chipText: { fontSize: 13, fontWeight: "600", color: c.foreground },
+  chipTextActive: { color: "#fff" },
+  sortRow: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    paddingHorizontal: 16, paddingVertical: 8,
+    borderBottomWidth: 1, borderBottomColor: c.cardBorder, backgroundColor: c.background,
+  },
+  count: { fontSize: 13, fontWeight: "700", color: c.mutedForeground },
+  sortChips: { gap: 6, flexDirection: "row" },
+  sortChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: c.muted },
+  sortChipActive: { backgroundColor: c.primaryLight },
+  sortChipText: { fontSize: 12, fontWeight: "600", color: c.mutedForeground },
+  sortChipTextActive: { color: c.primary, fontWeight: "700" },
+  list: { padding: 16, gap: 12 },
+  card: {
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: c.card, borderRadius: 18, padding: 16, gap: 12,
+    borderWidth: 1, borderColor: c.cardBorder,
+    shadowColor: c.shadowColor, shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3,
+  },
+  avatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: c.primaryLight },
+  info: { flex: 1, gap: 4 },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  name: { fontSize: 16, fontWeight: "800", color: c.foreground, flexShrink: 1 },
+  ratingRow: { flexDirection: "row", alignItems: "center", gap: 3, flexWrap: "wrap" },
+  star: { fontSize: 12 },
+  ratingText: { fontSize: 13, fontWeight: "700", color: c.foreground },
+  ratingCount: { fontSize: 12, color: c.mutedForeground },
+  dot: { fontSize: 12, color: c.mutedForeground },
+  metaText: { fontSize: 12, color: c.mutedForeground },
+  areas: { fontSize: 12, color: c.mutedForeground, marginTop: 2 },
+  price: { fontSize: 12, color: c.foregroundSecondary, marginTop: 2, fontWeight: "600" },
+  tagRow: { flexDirection: "row", gap: 6, flexWrap: "wrap", marginTop: 4 },
+  tag: { backgroundColor: c.primaryLight, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  tagText: { fontSize: 11, color: c.primary, fontWeight: "600" },
+  saveBtn: {
+    width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center",
+    backgroundColor: c.muted, borderWidth: 1, borderColor: c.border,
+  },
+  saveBtnOn: { backgroundColor: c.primaryLight, borderColor: c.primary },
+  saveBtnText: { fontSize: 18 },
+  saveBtnTextOn: { fontSize: 18 },
+  empty: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 12 },
+  emptyEmoji: { fontSize: 56 },
+  emptyTitle: { fontSize: 20, fontWeight: "800", color: c.foreground },
+  emptySub: { fontSize: 14, color: c.mutedForeground, textAlign: "center", lineHeight: 20 },
+  clearBtn: { marginTop: 8, backgroundColor: c.primary, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 24 },
+  clearBtnText: { color: "#fff", fontWeight: "800", fontSize: 14 },
+});
