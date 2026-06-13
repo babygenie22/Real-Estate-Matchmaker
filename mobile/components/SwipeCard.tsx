@@ -35,6 +35,7 @@ interface SwipeCardProps {
   onPass: () => void;
   onPress: () => void;
   isTop: boolean;
+  behind?: boolean;
 }
 
 export interface SwipeCardHandle {
@@ -42,7 +43,7 @@ export interface SwipeCardHandle {
 }
 
 const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function SwipeCard(
-  { agent, onLike, onPass, onPress, isTop },
+  { agent, onLike, onPass, onPress, isTop, behind = false },
   ref
 ) {
   const { colors } = useTheme();
@@ -144,17 +145,20 @@ const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function SwipeCard
 
   return (
     <Animated.View
+      pointerEvents={behind ? "none" : "auto"}
       style={[
         styles.card,
-        {
-          transform: [
-            { translateX: position.x },
-            { translateY: position.y },
-            { rotate },
-          ],
-        },
+        behind
+          ? { transform: [{ scale: 0.92 }, { translateY: 44 }], opacity: 0.7 }
+          : {
+              transform: [
+                { translateX: position.x },
+                { translateY: position.y },
+                { rotate },
+              ],
+            },
       ]}
-      {...(isTop ? panResponder.panHandlers : {})}
+      {...(isTop && !behind ? panResponder.panHandlers : {})}
     >
       <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
 

@@ -13,7 +13,7 @@ import { useTheme, type ThemeColors } from "@/lib/theme";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 const CARD_W = SCREEN_W - 32;
-const CARD_H = CARD_W * 1.35;
+const CARD_H = CARD_W * 1.38; // matches SwipeCard so skeleton → card has no size jump
 
 interface Agent {
   id: string;
@@ -252,11 +252,17 @@ export default function DiscoverScreen() {
           </View>
         ) : (
           <>
-            {/* Background card (next) */}
+            {/* Next card peeking behind, so swiping reveals a real agent */}
             {nextAgent && (
-              <View style={[styles.backCard, { width: CARD_W, height: CARD_H }]}>
-                <View style={styles.backCardInner} />
-              </View>
+              <SwipeCard
+                key={`behind-${nextAgent.id}`}
+                agent={nextAgent}
+                behind
+                isTop={false}
+                onLike={() => {}}
+                onPass={() => {}}
+                onPress={() => {}}
+              />
             )}
 
             {/* Top swipeable card */}
@@ -342,17 +348,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-  },
-  backCard: {
-    position: "absolute",
-    borderRadius: 20,
-    overflow: "hidden",
-  },
-  backCardInner: {
-    flex: 1,
-    backgroundColor: c.muted,
-    borderRadius: 20,
-    transform: [{ scale: 0.96 }, { translateY: 12 }],
   },
   emptyState: { alignItems: "center", padding: 32, gap: 12 },
   emptyEmoji: { fontSize: 64 },
