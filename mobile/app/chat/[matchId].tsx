@@ -19,21 +19,26 @@ interface Message {
   status?: "sending" | "failed";
 }
 
-interface Match {
-  id: string;
-  agent: { id: string; name: string; photo: string | null };
+// The other party in the conversation, normalized across buyer/agent views.
+interface Peer {
+  name: string;
+  photo: string | null;
+  subtitle: string;
+  agentId?: string; // present only when the peer is an agent (buyer's view)
 }
 
 export default function ChatScreen() {
   const { matchId } = useLocalSearchParams<{ matchId: string }>();
   const { user } = useAuth();
+  const isAgentRole = user?.role === "agent";
+  const sendPath = isAgentRole ? "/api/agent-portal/messages" : "/api/messages";
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const navigation = useNavigation();
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [match, setMatch] = useState<Match | null>(null);
+  const [peer, setPeer] = useState<Peer | null>(null);
   const [loading, setLoading] = useState(true);
   const [agentTyping, setAgentTyping] = useState(false);
   const socketRef = useRef<Socket | null>(null);
@@ -54,11 +59,23 @@ export default function ChatScreen() {
 
   async function loadMatch() {
     try {
-      const matches = await api.get<Match[]>("/api/matches");
-      const m = matches.find((x) => x.id === matchId);
-      if (m) {
-        setMatch(m);
-        navigation.setOptions({ title: m.agent.name });
+      if (isAgentRole) {
+        // Agent view: the peer is the matched buyer.
+        const matches = await api.get<any[]>("/api/agent-portal/matches");
+        const m = matches.find((x) => x.id === matchId);
+        if (m?.user) {
+          const name = [m.user.firstName, m.user.lastName].filter(Boolean).join(" ") || "Client";
+          setPeer({ name, photo: m.user.photo ?? null, subtitle: "Client" });
+          navigation.setOptions({ title: name });
+        }
+      } else {
+        // Buyer view: the peer is the matched agent.
+        const matches = await api.get<any[]>("/api/matches");
+        const m = matches.find((x) => x.id === matchId);
+        if (m?.agent) {
+          setPeer({ name: m.agent.name, photo: m.agent.photo ?? null, subtitle: "Real Estate Agent", agentId: m.agent.id });
+          navigation.setOptions({ title: m.agent.name });
+        }
       }
     } catch {}
   }
@@ -109,7 +126,7 @@ export default function ChatScreen() {
 
   async function deliver(content: string, tempId: string) {
     try {
-      const saved = await api.post<Message>("/api/messages", { matchId, content });
+      const saved = await api.post<Message>(sendPath, { matchId, content });
       // Replace the optimistic bubble with the server copy (socket may also do this).
       setMessages((prev) => {
         if (saved?.id && prev.find((m) => m.id === saved.id)) {
@@ -132,7 +149,7 @@ export default function ChatScreen() {
     const optimistic: Message = {
       id: tempId,
       senderId: user?.id ?? "me",
-      senderType: "buyer",
+      senderType: isAgentRole ? "agent" : "user",
       content,
       createdAt: new Date().toISOString(),
       status: "sending",
@@ -162,33 +179,36 @@ export default function ChatScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Agent header */}
-      {match && (
+      {/* Conversation header */}
+      {peer && (
         <View style={styles.agentBar}>
           <Image
-            source={{ uri: match.agent.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(match.agent.name)}&size=80&background=dbeafe&color=2563eb` }}
+            source={{ uri: peer.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(peer.name)}&size=80&background=dbeafe&color=2563eb` }}
             style={styles.agentAvatar}
           />
           <View style={styles.agentBarInfo}>
-            <Text style={styles.agentName}>{match.agent.name}</Text>
-            <Text style={styles.agentSub}>Real Estate Agent</Text>
+            <Text style={styles.agentName}>{peer.name}</Text>
+            <Text style={styles.agentSub}>{peer.subtitle}</Text>
           </View>
-          <View style={styles.agentBarActions}>
-            <TouchableOpacity
-              style={styles.agentBarBtn}
-              onPress={() => router.push(`/agent/${match.agent.id}` as any)}
-              activeOpacity={0.75}
-            >
-              <Text style={styles.agentBarBtnText}>👤 Profile</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.agentBarBtn, styles.agentBarBtnPrimary]}
-              onPress={() => router.push(`/booking/${match.agent.id}` as any)}
-              activeOpacity={0.75}
-            >
-              <Text style={[styles.agentBarBtnText, styles.agentBarBtnTextPrimary]}>📅 Book</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Profile/Book only make sense when the buyer is viewing an agent. */}
+          {peer.agentId && (
+            <View style={styles.agentBarActions}>
+              <TouchableOpacity
+                style={styles.agentBarBtn}
+                onPress={() => router.push(`/agent/${peer.agentId}` as any)}
+                activeOpacity={0.75}
+              >
+                <Text style={styles.agentBarBtnText}>👤 Profile</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.agentBarBtn, styles.agentBarBtnPrimary]}
+                onPress={() => router.push(`/booking/${peer.agentId}` as any)}
+                activeOpacity={0.75}
+              >
+                <Text style={[styles.agentBarBtnText, styles.agentBarBtnTextPrimary]}>📅 Book</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       )}
 
@@ -202,14 +222,21 @@ export default function ChatScreen() {
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
           ListEmptyComponent={
             <View style={styles.emptyChat}>
-              <Text style={styles.emptyChatText}>👋 Say hello to {match?.agent.name}!</Text>
+              <Text style={styles.emptyChatText}>👋 Say hello to {peer?.name ?? "your match"}!</Text>
               <Text style={styles.emptyChatSub}>Not sure where to start? Try one of these:</Text>
               <View style={styles.promptList}>
-                {[
-                  "Hi! When are you available for a call?",
-                  "What areas do you know best?",
-                  "I'd like to schedule a consultation.",
-                ].map((p) => (
+                {(isAgentRole
+                  ? [
+                      "Hi! Thanks for matching — how can I help?",
+                      "What kind of home are you looking for?",
+                      "Happy to set up a time to chat. When works?",
+                    ]
+                  : [
+                      "Hi! When are you available for a call?",
+                      "What areas do you know best?",
+                      "I'd like to schedule a consultation.",
+                    ]
+                ).map((p) => (
                   <TouchableOpacity key={p} style={styles.promptChip} onPress={() => setInput(p)} activeOpacity={0.7}>
                     <Text style={styles.promptChipText}>{p}</Text>
                   </TouchableOpacity>
@@ -248,7 +275,7 @@ export default function ChatScreen() {
 
         {agentTyping && (
           <View style={styles.typingRow}>
-            <Text style={styles.typingText}>{match?.agent.name ?? "Agent"} is typing…</Text>
+            <Text style={styles.typingText}>{peer?.name ?? "They"} {peer ? "is" : "are"} typing…</Text>
           </View>
         )}
 

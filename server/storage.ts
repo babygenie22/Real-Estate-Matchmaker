@@ -326,13 +326,21 @@ export class DatabaseStorage implements IStorage {
     try {
       const match = await this.getMatch(msg.matchId);
       if (match) {
-        const recipientId = msg.senderType === "user" ? null : match.userId;
-        if (recipientId) {
-          await this.createNotification({ userId: recipientId, type: "message", title: "New Message", body: msg.content.slice(0, 80), referenceId: msg.matchId });
-          if (msg.senderType === "agent") {
+        const agent = await this.getAgent(match.agentId);
+        // Resolve the recipient for BOTH directions: a buyer's message goes to
+        // the agent's user account; an agent's reply goes to the buyer.
+        const recipientId = msg.senderType === "user" ? agent?.userId : match.userId;
+        if (recipientId && recipientId !== msg.senderId) {
+          const title = msg.senderType === "agent" ? (agent?.name || "Your agent") : "New message";
+          const preview = msg.content.slice(0, 80);
+
+          await this.createNotification({ userId: recipientId, type: "message", title, body: preview, referenceId: msg.matchId });
+          sendPushNotification(recipientId, title, preview, { type: "message", referenceId: msg.matchId });
+
+          // Email only the buyer when an agent replies (agents work in the portal).
+          if (msg.senderType === "agent" && agent) {
             const [recipient] = await db.select().from(users).where(eq(users.id, recipientId));
-            const agent = await this.getAgent(match.agentId);
-            if (recipient?.email && agent) {
+            if (recipient?.email) {
               import("./integrations/resend").then(({ sendNewMessageEmail }) =>
                 sendNewMessageEmail(recipient.email!, recipient.firstName || "", agent.name, msg.content.slice(0, 120)).catch(() => {})
               );
