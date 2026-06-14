@@ -1,21 +1,28 @@
 import { useEffect, useState } from "react";
 import { Tabs } from "expo-router";
 import { Text, View } from "react-native";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/lib/theme";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
-function TabIcon({ emoji, focused, badge }: { emoji: string; focused: boolean; badge?: number }) {
+type IconRender = (color: number | string, size: number) => React.ReactNode;
+
+function TabIcon({ icon, focused, badge }: { icon: IconRender; focused: boolean; badge?: number }) {
   const { colors } = useTheme();
+  const color = focused ? colors.primary : colors.mutedForeground;
   return (
     <View style={{ alignItems: "center", justifyContent: "center" }}>
-      {focused ? (
-        <View style={{ backgroundColor: colors.primaryLight, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}>
-          <Text style={{ fontSize: 20 }}>{emoji}</Text>
-        </View>
-      ) : (
-        <Text style={{ fontSize: 20, opacity: 0.45 }}>{emoji}</Text>
-      )}
+      <View
+        style={{
+          backgroundColor: focused ? colors.primaryLight : "transparent",
+          borderRadius: 12,
+          paddingHorizontal: 12,
+          paddingVertical: 5,
+        }}
+      >
+        {icon(color, 21)}
+      </View>
       {badge != null && badge > 0 && (
         <View style={{
           position: "absolute",
@@ -91,18 +98,18 @@ export default function TabsLayout() {
     >
       <Tabs.Screen
         name="discover"
-        options={{ title: "Discover", tabBarIcon: ({ focused }) => <TabIcon emoji="🔥" focused={focused} /> }}
+        options={{ title: "Discover", tabBarIcon: ({ focused }) => <TabIcon icon={(c, s) => <Ionicons name="albums" size={s} color={c as string} />} focused={focused} /> }}
       />
       <Tabs.Screen
         name="search"
-        options={{ title: "Browse", tabBarIcon: ({ focused }) => <TabIcon emoji="🔍" focused={focused} /> }}
+        options={{ title: "Browse", tabBarIcon: ({ focused }) => <TabIcon icon={(c, s) => <Feather name="search" size={s} color={c as string} />} focused={focused} /> }}
       />
       <Tabs.Screen
         name="matches"
         options={{
           title: "Matches",
           tabBarBadge: matchCount,
-          tabBarIcon: ({ focused }) => <TabIcon emoji="💚" focused={focused} badge={matchCount} />,
+          tabBarIcon: ({ focused }) => <TabIcon icon={(c, s) => <Ionicons name="heart" size={s} color={c as string} />} focused={focused} badge={matchCount} />,
         }}
       />
       <Tabs.Screen
@@ -110,16 +117,16 @@ export default function TabsLayout() {
         options={{
           title: "Alerts",
           tabBarBadge: unread,
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🔔" focused={focused} badge={unread} />,
+          tabBarIcon: ({ focused }) => <TabIcon icon={(c, s) => <Feather name="bell" size={s} color={c as string} />} focused={focused} badge={unread} />,
         }}
       />
       <Tabs.Screen
         name="profile"
-        options={{ title: "Profile", tabBarIcon: ({ focused }) => <TabIcon emoji="👤" focused={focused} /> }}
+        options={{ title: "Profile", tabBarIcon: ({ focused }) => <TabIcon icon={(c, s) => <Feather name="user" size={s} color={c as string} />} focused={focused} /> }}
       />
       <Tabs.Screen
         name="settings"
-        options={{ title: "Settings", tabBarIcon: ({ focused }) => <TabIcon emoji="⚙️" focused={focused} />, href: null }}
+        options={{ title: "Settings", tabBarIcon: ({ focused }) => <TabIcon icon={(c, s) => <Feather name="settings" size={s} color={c as string} />} focused={focused} />, href: null }}
       />
     </Tabs>
   );

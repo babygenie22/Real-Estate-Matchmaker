@@ -4,6 +4,7 @@ import {
   SafeAreaView, Alert, RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api";
 import { useTheme, type ThemeColors } from "@/lib/theme";
 import { SkeletonRow } from "@/components/Skeleton";
@@ -82,7 +83,7 @@ export default function MatchesScreen() {
 
       {matches.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>💚</Text>
+          <Ionicons name="heart" size={56} color={colors.primary} />
           <Text style={styles.emptyTitle}>No matches yet</Text>
           <Text style={styles.emptySub}>Go to Discover and swipe right on agents you like!</Text>
         </View>
@@ -118,7 +119,7 @@ function MatchCard({ match }: { match: Match }) {
           {isVerified(agent) && <VerifiedBadge size="sm" />}
         </View>
         <View style={styles.ratingRow}>
-          <Text style={styles.star}>⭐</Text>
+          <Ionicons name="star" size={12} color="#fbbf24" />
           <Text style={styles.ratingText}>{agent.rating?.toFixed(1)}</Text>
           <Text style={styles.ratingCount}>({agent.reviewCount})</Text>
           {agent.yearsExperience != null && (
@@ -129,9 +130,10 @@ function MatchCard({ match }: { match: Match }) {
           )}
         </View>
         {agent.serviceAreas && agent.serviceAreas.length > 0 && (
-          <Text style={styles.areas} numberOfLines={1}>
-            📍 {agent.serviceAreas.slice(0, 2).join(", ")}
-          </Text>
+          <View style={styles.areasRow}>
+            <Feather name="map-pin" size={12} color={colors.mutedForeground} />
+            <Text style={styles.areas} numberOfLines={1}>{agent.serviceAreas.slice(0, 2).join(", ")}</Text>
+          </View>
         )}
         {agent.specialties && agent.specialties.length > 0 && (
           <View style={styles.tagRow}>
@@ -145,9 +147,10 @@ function MatchCard({ match }: { match: Match }) {
         {(() => {
           const preview = typeof match.lastMessage === "string" ? match.lastMessage : match.lastMessage?.content;
           return preview ? (
-            <Text style={styles.lastMessage} numberOfLines={1}>
-              💬 {preview}
-            </Text>
+            <View style={styles.lastMessageRow}>
+              <Feather name="message-circle" size={12} color={colors.mutedForeground} />
+              <Text style={styles.lastMessage} numberOfLines={1}>{preview}</Text>
+            </View>
           ) : null;
         })()}
       </View>
@@ -157,14 +160,16 @@ function MatchCard({ match }: { match: Match }) {
           onPress={() => { haptics.light(); router.push(`/chat/${match.id}`); }}
           activeOpacity={0.85}
         >
-          <Text style={styles.chatBtnText}>💬 Chat</Text>
+          <Feather name="message-circle" size={14} color="#fff" />
+          <Text style={styles.chatBtnText}>Chat</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.bookBtn}
           onPress={() => { haptics.light(); router.push(`/booking/${agent.id}`); }}
           activeOpacity={0.85}
         >
-          <Text style={styles.bookBtnText}>📅 Book</Text>
+          <Feather name="calendar" size={14} color={colors.foreground} />
+          <Text style={styles.bookBtnText}>Book</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -201,24 +206,28 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   info: { gap: 4 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   name: { fontSize: 17, fontWeight: "800", color: c.foreground },
-  lastMessage: { fontSize: 13, color: c.mutedForeground, fontStyle: "italic", marginTop: 2 },
+  lastMessageRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 2 },
+  lastMessage: { fontSize: 13, color: c.mutedForeground, fontStyle: "italic", flexShrink: 1 },
   ratingRow: { flexDirection: "row", alignItems: "center", gap: 3 },
-  star: { fontSize: 12 },
   ratingText: { fontSize: 13, fontWeight: "700", color: c.foreground },
   ratingCount: { fontSize: 12, color: c.mutedForeground },
   dot: { fontSize: 12, color: c.mutedForeground },
   yearsText: { fontSize: 12, color: c.mutedForeground },
-  areas: { fontSize: 12, color: c.mutedForeground, marginTop: 2 },
+  areasRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 2 },
+  areas: { fontSize: 12, color: c.mutedForeground, flexShrink: 1 },
   tagRow: { flexDirection: "row", gap: 6, flexWrap: "wrap", marginTop: 4 },
   tag: { backgroundColor: c.primaryLight, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
   tagText: { fontSize: 11, color: c.primary, fontWeight: "600" },
   actions: { flexDirection: "row", gap: 10 },
   chatBtn: {
     flex: 1,
+    flexDirection: "row",
+    gap: 6,
     backgroundColor: c.primary,
     borderRadius: 12,
     paddingVertical: 11,
     alignItems: "center",
+    justifyContent: "center",
     shadowColor: c.primary,
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -228,10 +237,13 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   chatBtnText: { color: "#fff", fontWeight: "800", fontSize: 14 },
   bookBtn: {
     flex: 1,
+    flexDirection: "row",
+    gap: 6,
     backgroundColor: c.muted,
     borderRadius: 12,
     paddingVertical: 11,
     alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
     borderColor: c.cardBorder,
   },

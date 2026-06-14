@@ -4,6 +4,7 @@ import {
   ActivityIndicator, RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api";
 import { SkeletonRow } from "@/components/Skeleton";
 import { useTheme, type ThemeColors } from "@/lib/theme";
@@ -77,7 +78,10 @@ export default function AgentReviewsScreen() {
 
       {!loading && reviews.length > 0 && (
         <View style={styles.summary}>
-          <Text style={styles.summaryAvg}>⭐ {avg.toFixed(1)}</Text>
+          <View style={styles.summaryAvgRow}>
+            <Ionicons name="star" size={24} color="#fbbf24" />
+            <Text style={styles.summaryAvg}>{avg.toFixed(1)}</Text>
+          </View>
           <Text style={styles.summaryCount}>{data?.total} review{data?.total !== 1 ? "s" : ""}</Text>
         </View>
       )}
@@ -90,7 +94,7 @@ export default function AgentReviewsScreen() {
         </View>
       ) : reviews.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>⭐</Text>
+          <Ionicons name="star-outline" size={52} color={colors.mutedForeground} />
           <Text style={styles.emptyTitle}>No reviews yet</Text>
           <Text style={styles.emptySub}>
             Reviews from clients you've worked with will appear here. Deliver great
@@ -110,7 +114,16 @@ export default function AgentReviewsScreen() {
             return (
               <View style={styles.card}>
                 <View style={styles.cardHeader}>
-                  <Text style={styles.stars}>{"★".repeat(stars)}<Text style={styles.starsEmpty}>{"★".repeat(5 - stars)}</Text></Text>
+                  <View style={styles.stars}>
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Ionicons
+                        key={i}
+                        name="star"
+                        size={15}
+                        color={i < stars ? "#fbbf24" : colors.border}
+                      />
+                    ))}
+                  </View>
                   {item.createdAt && <Text style={styles.date}>{timeAgo(item.createdAt)}</Text>}
                 </View>
                 {item.text ? <Text style={styles.body}>{item.text}</Text> : <Text style={styles.bodyEmpty}>No written feedback</Text>}
@@ -141,11 +154,12 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   title: { fontSize: 18, fontWeight: "800", color: c.foreground },
   summary: {
     flexDirection: "row",
-    alignItems: "baseline",
+    alignItems: "center",
     gap: 10,
     paddingHorizontal: 20,
     paddingVertical: 14,
   },
+  summaryAvgRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   summaryAvg: { fontSize: 28, fontWeight: "900", color: c.foreground },
   summaryCount: { fontSize: 14, color: c.mutedForeground },
   list: { padding: 16, gap: 12 },
@@ -157,14 +171,12 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     borderColor: c.cardBorder,
   },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  stars: { fontSize: 15, color: c.warning, letterSpacing: 1 },
-  starsEmpty: { color: c.border },
+  stars: { flexDirection: "row", alignItems: "center", gap: 2 },
   date: { fontSize: 12, color: c.mutedForeground },
   body: { fontSize: 15, color: c.foreground, lineHeight: 21 },
   bodyEmpty: { fontSize: 14, color: c.mutedForeground, fontStyle: "italic" },
   author: { fontSize: 13, color: c.mutedForeground, marginTop: 10, fontWeight: "600" },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", padding: 40, gap: 10 },
-  emptyEmoji: { fontSize: 56 },
   emptyTitle: { fontSize: 20, fontWeight: "800", color: c.foreground },
   emptySub: { fontSize: 14, color: c.mutedForeground, textAlign: "center", lineHeight: 20 },
 });

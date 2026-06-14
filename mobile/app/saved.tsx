@@ -3,6 +3,7 @@ import {
   View, Text, FlatList, TouchableOpacity, Image, StyleSheet,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { useTheme, type ThemeColors } from "@/lib/theme";
 import { SkeletonRow } from "@/components/Skeleton";
 import { VerifiedBadge, isVerified } from "@/components/VerifiedBadge";
@@ -51,7 +52,7 @@ export default function SavedScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>🔖</Text>
+          <Ionicons name="bookmark" size={64} color={colors.primary} />
           <Text style={styles.emptyTitle}>No saved agents yet</Text>
           <Text style={styles.emptySub}>
             Tap the bookmark on an agent's profile to save them to your shortlist.
@@ -93,7 +94,8 @@ export default function SavedScreen() {
             onPress={() => { haptics.medium(); router.push(`/compare?ids=${selected.join(",")}`); }}
             activeOpacity={0.85}
           >
-            <Text style={styles.compareBtnText}>Compare {selected.length} agents →</Text>
+            <Text style={styles.compareBtnText}>Compare {selected.length} agents</Text>
+            <Feather name="arrow-right" size={16} color="#fff" />
           </TouchableOpacity>
         ) : (
           <Text style={styles.hint}>Select 2-3 agents to compare</Text>
@@ -125,7 +127,7 @@ function SavedCard({
           {isVerified(agent) && <VerifiedBadge size="sm" />}
         </View>
         <View style={styles.ratingRow}>
-          <Text style={styles.star}>⭐</Text>
+          <Ionicons name="star" size={12} color="#fbbf24" />
           <Text style={styles.ratingText}>{agent.rating?.toFixed(1)}</Text>
           <Text style={styles.ratingCount}>({agent.reviewCount})</Text>
           {agent.transactionCount != null && (
@@ -142,9 +144,10 @@ function SavedCard({
           )}
         </View>
         {agent.serviceAreas && agent.serviceAreas.length > 0 && (
-          <Text style={styles.areas} numberOfLines={1}>
-            📍 {agent.serviceAreas.slice(0, 2).join(", ")}
-          </Text>
+          <View style={styles.areasRow}>
+            <Feather name="map-pin" size={12} color={colors.mutedForeground} />
+            <Text style={styles.areas} numberOfLines={1}>{agent.serviceAreas.slice(0, 2).join(", ")}</Text>
+          </View>
         )}
         {agent.specialties && agent.specialties.length > 0 && (
           <View style={styles.tagRow}>
@@ -161,7 +164,10 @@ function SavedCard({
           activeOpacity={0.7}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Text style={styles.removeBtnText}>♡ Remove</Text>
+          <View style={styles.removeBtnInner}>
+            <Feather name="x" size={13} color={colors.destructive} />
+            <Text style={styles.removeBtnText}>Remove</Text>
+          </View>
         </TouchableOpacity>
       </View>
       <TouchableOpacity
@@ -170,7 +176,7 @@ function SavedCard({
         activeOpacity={0.7}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        {selected && <Text style={styles.checkboxCheck}>✓</Text>}
+        {selected && <Feather name="check" size={15} color="#fff" />}
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -199,16 +205,17 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   name: { fontSize: 16, fontWeight: "800", color: c.foreground, flexShrink: 1 },
   ratingRow: { flexDirection: "row", alignItems: "center", gap: 3, flexWrap: "wrap" },
-  star: { fontSize: 12 },
   ratingText: { fontSize: 13, fontWeight: "700", color: c.foreground },
   ratingCount: { fontSize: 12, color: c.mutedForeground },
   dot: { fontSize: 12, color: c.mutedForeground },
   metaText: { fontSize: 12, color: c.mutedForeground },
-  areas: { fontSize: 12, color: c.mutedForeground, marginTop: 2 },
+  areasRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 2 },
+  areas: { fontSize: 12, color: c.mutedForeground, flexShrink: 1 },
   tagRow: { flexDirection: "row", gap: 6, flexWrap: "wrap", marginTop: 4 },
   tag: { backgroundColor: c.primaryLight, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
   tagText: { fontSize: 11, color: c.primary, fontWeight: "600" },
   removeBtn: { marginTop: 6, alignSelf: "flex-start" },
+  removeBtnInner: { flexDirection: "row", alignItems: "center", gap: 4 },
   removeBtnText: { fontSize: 12, color: c.destructive, fontWeight: "600" },
   checkbox: {
     width: 28,
@@ -237,10 +244,13 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   compareBtn: {
     width: "100%",
+    flexDirection: "row",
+    gap: 8,
     backgroundColor: c.primary,
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: "center",
+    justifyContent: "center",
     shadowColor: c.primary,
     shadowOpacity: 0.3,
     shadowRadius: 8,

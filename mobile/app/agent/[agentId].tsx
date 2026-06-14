@@ -3,6 +3,7 @@ import {
   View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { api } from "@/lib/api";
 import { useTheme, type ThemeColors } from "@/lib/theme";
@@ -112,7 +113,7 @@ export default function AgentDetailScreen() {
           <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
           {/* Floating controls (hero starts below the status bar, so 8px is clear) */}
           <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()} hitSlop={8}>
-            <Text style={styles.closeBtnText}>✕</Text>
+            <Feather name="x" size={20} color="#fff" />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.saveBtn, saved && styles.saveBtnActive]}
@@ -120,7 +121,9 @@ export default function AgentDetailScreen() {
             activeOpacity={0.8}
             hitSlop={8}
           >
-            <Text style={styles.saveBtnText}>{saved ? "🔖" : "♡"}</Text>
+            {saved
+              ? <Ionicons name="bookmark" size={20} color="#fff" />
+              : <Feather name="bookmark" size={20} color="#fff" />}
           </TouchableOpacity>
         </View>
 
@@ -131,7 +134,10 @@ export default function AgentDetailScreen() {
             {isVerified(agent) && <VerifiedBadge />}
           </View>
           {agent.rating != null && (
-            <Text style={styles.heroRating}>⭐ {agent.rating.toFixed(1)}  ({agent.reviewCount} reviews)</Text>
+            <View style={styles.heroRatingRow}>
+              <Ionicons name="star" size={14} color="#fbbf24" />
+              <Text style={styles.heroRating}>{agent.rating.toFixed(1)}  ({agent.reviewCount} reviews)</Text>
+            </View>
           )}
         </View>
 
@@ -182,7 +188,10 @@ export default function AgentDetailScreen() {
           {/* Service areas */}
           {agent.serviceAreas && agent.serviceAreas.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>📍 Service Areas</Text>
+              <View style={styles.sectionTitleRow}>
+                <Feather name="map-pin" size={12} color={colors.mutedForeground} />
+                <Text style={styles.sectionTitle}>Service Areas</Text>
+              </View>
               <Text style={styles.detail}>{agent.serviceAreas.join(" • ")}</Text>
             </View>
           )}
@@ -190,7 +199,10 @@ export default function AgentDetailScreen() {
           {/* Languages */}
           {agent.languages && agent.languages.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>🌐 Languages</Text>
+              <View style={styles.sectionTitleRow}>
+                <Feather name="globe" size={12} color={colors.mutedForeground} />
+                <Text style={styles.sectionTitle}>Languages</Text>
+              </View>
               <Text style={styles.detail}>{agent.languages.join(", ")}</Text>
             </View>
           )}
@@ -222,7 +234,16 @@ export default function AgentDetailScreen() {
                   return (
                     <View key={r.id} style={styles.reviewCard}>
                       <View style={styles.reviewHeader}>
-                        <Text style={styles.reviewStars}>{"⭐".repeat(stars) || `⭐ ${(r.rating || 0).toFixed(1)}`}</Text>
+                        <View style={styles.reviewStars}>
+                          {[0, 1, 2, 3, 4].map((i) => (
+                            <Ionicons
+                              key={i}
+                              name="star"
+                              size={14}
+                              color={i < stars ? "#fbbf24" : colors.border}
+                            />
+                          ))}
+                        </View>
                         {r.createdAt && <Text style={styles.reviewDate}>{timeAgo(r.createdAt)}</Text>}
                       </View>
                       {r.text ? <Text style={styles.reviewText}>{r.text}</Text> : null}
@@ -244,7 +265,10 @@ export default function AgentDetailScreen() {
       {/* CTA */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
         <TouchableOpacity style={styles.bookBtn} onPress={() => router.push(`/booking/${agent.id}`)}>
-          <Text style={styles.bookBtnText}>📅 Book Consultation</Text>
+          <View style={styles.bookBtnRow}>
+            <Feather name="calendar" size={18} color="#fff" />
+            <Text style={styles.bookBtnText}>Book Consultation</Text>
+          </View>
         </TouchableOpacity>
       </View>
     </View>
@@ -270,7 +294,8 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   heroNameRow: { flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" },
   heroName: { fontSize: 24, fontWeight: "800", color: c.foreground, letterSpacing: -0.3 },
-  heroRating: { fontSize: 14, color: c.mutedForeground, marginTop: 4 },
+  heroRatingRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 4 },
+  heroRating: { fontSize: 14, color: c.mutedForeground },
   body: { paddingHorizontal: 20, paddingTop: 16 },
   // flexBasis 23% keeps one row on regular phones but wraps to a 2x2 grid on
   // narrow screens (iPhone SE) instead of truncating the labels.
@@ -279,6 +304,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   statValue: { fontSize: 20, fontWeight: "800", color: c.foreground },
   statLabel: { fontSize: 10, color: c.mutedForeground, marginTop: 3, textAlign: "center" },
   section: { marginBottom: 20 },
+  sectionTitleRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 },
   sectionTitle: { fontSize: 12, fontWeight: "700", color: c.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 },
   bio: { fontSize: 15, color: c.foreground, lineHeight: 22 },
   detail: { fontSize: 15, color: c.foreground, lineHeight: 22 },
@@ -297,12 +323,13 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     padding: 14,
   },
   reviewHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  reviewStars: { fontSize: 13 },
+  reviewStars: { flexDirection: "row", alignItems: "center", gap: 2 },
   reviewDate: { fontSize: 12, color: c.mutedForeground },
   reviewText: { fontSize: 14, color: c.foreground, lineHeight: 20, marginTop: 8 },
   reviewAuthor: { fontSize: 12, fontWeight: "700", color: c.mutedForeground, marginTop: 8 },
   license: { fontSize: 12, color: c.mutedForeground, marginTop: 8 },
   footer: { padding: 16, borderTopWidth: 1, borderTopColor: c.border },
   bookBtn: { backgroundColor: c.primary, borderRadius: 14, paddingVertical: 16, alignItems: "center" },
+  bookBtnRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   bookBtnText: { color: "#fff", fontWeight: "700", fontSize: 17 },
 });

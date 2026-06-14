@@ -4,6 +4,7 @@ import {
   SafeAreaView, ScrollView, ActivityIndicator, Alert, RefreshControl, Modal,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { haptics } from "@/lib/haptics";
@@ -211,7 +212,10 @@ export default function AgentDashboard() {
         {/* Pending Approval Banner */}
         {stats && stats.isApproved === false && (
           <View style={styles.pendingBanner}>
-            <Text style={styles.pendingBannerTitle}>⏳ Profile Under Review</Text>
+            <View style={styles.pendingBannerTitleRow}>
+              <Feather name="clock" size={15} color={colors.warning} />
+              <Text style={styles.pendingBannerTitle}>Profile Under Review</Text>
+            </View>
             <Text style={styles.pendingBannerBody}>
               Your profile is pending admin approval. It will appear in buyer searches once approved.
             </Text>
@@ -226,17 +230,22 @@ export default function AgentDashboard() {
               <Text style={styles.agentName}>{agentName}</Text>
               {stats?.isApproved === true && (
                 <View style={styles.approvedBadge}>
-                  <Text style={styles.approvedBadgeText}>✓ Approved</Text>
+                  <Feather name="check" size={12} color={colors.success} />
+                  <Text style={styles.approvedBadgeText}>Approved</Text>
                 </View>
               )}
             </View>
             {stats && stats.averageRating > 0 && (
-              <Text style={styles.ratingText}>
-                ⭐ {stats.averageRating.toFixed(1)}  ·  {stats.totalReviews} review{stats.totalReviews !== 1 ? "s" : ""}
-              </Text>
+              <View style={styles.ratingRow}>
+                <Ionicons name="star" size={14} color="#fbbf24" />
+                <Text style={styles.ratingText}>
+                  {stats.averageRating.toFixed(1)}  ·  {stats.totalReviews} review{stats.totalReviews !== 1 ? "s" : ""}
+                </Text>
+              </View>
             )}
             <View style={styles.agentBadge}>
-              <Text style={styles.agentBadgeText}>🏡 Agent Dashboard</Text>
+              <Feather name="home" size={12} color={colors.primary} />
+              <Text style={styles.agentBadgeText}>Agent Dashboard</Text>
             </View>
           </View>
           <View style={styles.headerActions}>
@@ -245,7 +254,10 @@ export default function AgentDashboard() {
               onPress={() => router.replace("/(tabs)/discover")}
               activeOpacity={0.8}
             >
-              <Text style={styles.switchModeText}>🏠 Buyer View</Text>
+              <View style={styles.switchModeInner}>
+                <Feather name="home" size={13} color={colors.primary} />
+                <Text style={styles.switchModeText}>Buyer View</Text>
+              </View>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.logoutBtn}
@@ -281,7 +293,7 @@ export default function AgentDashboard() {
 
           {matches.length === 0 ? (
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyEmoji}>🔍</Text>
+              <Feather name="users" size={34} color={colors.mutedForeground} />
               <Text style={styles.emptyText}>No matches yet</Text>
               <Text style={styles.emptyHint}>Buyers will appear here as they match with your profile</Text>
             </View>
@@ -327,7 +339,7 @@ export default function AgentDashboard() {
 
           {bookings.length === 0 ? (
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyEmoji}>📅</Text>
+              <Feather name="calendar" size={34} color={colors.mutedForeground} />
               <Text style={styles.emptyText}>No bookings yet</Text>
               <Text style={styles.emptyHint}>Consultation requests will appear here</Text>
             </View>
@@ -356,14 +368,20 @@ export default function AgentDashboard() {
                           onPress={() => handleBookingAction(booking.id, "confirm")}
                           activeOpacity={0.8}
                         >
-                          <Text style={styles.confirmBtnText}>✓ Confirm</Text>
+                          <View style={styles.btnInner}>
+                            <Feather name="check" size={15} color={colors.success} />
+                            <Text style={styles.confirmBtnText}>Confirm</Text>
+                          </View>
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={styles.declineBtn}
                           onPress={() => handleBookingAction(booking.id, "decline")}
                           activeOpacity={0.8}
                         >
-                          <Text style={styles.declineBtnText}>✗ Decline</Text>
+                          <View style={styles.btnInner}>
+                            <Feather name="x" size={15} color={colors.destructive} />
+                            <Text style={styles.declineBtnText}>Decline</Text>
+                          </View>
                         </TouchableOpacity>
                       </View>
                       <TouchableOpacity
@@ -371,7 +389,10 @@ export default function AgentDashboard() {
                         onPress={() => openReschedule(booking)}
                         activeOpacity={0.8}
                       >
-                        <Text style={styles.rescheduleBtnText}>🔄 Propose a new time</Text>
+                        <View style={styles.btnInner}>
+                          <Feather name="refresh-cw" size={14} color={colors.foregroundSecondary} />
+                          <Text style={styles.rescheduleBtnText}>Propose a new time</Text>
+                        </View>
                       </TouchableOpacity>
                     </>
                   )}
@@ -387,7 +408,11 @@ export default function AgentDashboard() {
           onPress={() => router.push("/(agent-portal)/chats" as any)}
           activeOpacity={0.85}
         >
-          <Text style={styles.messagesBtnText}>💬 Messages →</Text>
+          <View style={styles.messagesBtnInner}>
+            <Feather name="message-circle" size={18} color="#fff" />
+            <Text style={styles.messagesBtnText}>Messages</Text>
+            <Feather name="arrow-right" size={18} color="#fff" />
+          </View>
         </TouchableOpacity>
 
         {/* Reviews Link */}
@@ -396,8 +421,11 @@ export default function AgentDashboard() {
           onPress={() => router.push("/(agent-portal)/reviews" as any)}
           activeOpacity={0.85}
         >
-          <Text style={styles.linkRowText}>⭐ My Reviews</Text>
-          <Text style={styles.linkRowChevron}>›</Text>
+          <View style={styles.linkRowInner}>
+            <Ionicons name="star" size={18} color="#fbbf24" />
+            <Text style={styles.linkRowText}>My Reviews</Text>
+          </View>
+          <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
         </TouchableOpacity>
 
         {/* Edit Profile Link */}
@@ -488,7 +516,8 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     padding: 12,
     marginBottom: 20,
   },
-  pendingBannerTitle: { fontSize: 14, fontWeight: "800", color: c.warning, marginBottom: 4 },
+  pendingBannerTitleRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
+  pendingBannerTitle: { fontSize: 14, fontWeight: "800", color: c.warning },
   pendingBannerBody: { fontSize: 13, color: c.warning, lineHeight: 18 },
 
   header: {
@@ -501,6 +530,9 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   agentNameRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 2 },
   agentName: { fontSize: 26, fontWeight: "800", color: c.foreground, letterSpacing: -0.5 },
   approvedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     backgroundColor: c.successLight,
     borderRadius: 8,
     paddingHorizontal: 8,
@@ -510,8 +542,12 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     alignSelf: "center",
   },
   approvedBadgeText: { fontSize: 12, fontWeight: "700", color: c.success },
-  ratingText: { fontSize: 13, color: c.mutedForeground, fontWeight: "600", marginTop: 4 },
+  ratingRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 4 },
+  ratingText: { fontSize: 13, color: c.mutedForeground, fontWeight: "600" },
   agentBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
     marginTop: 6,
     backgroundColor: c.primaryLight,
     paddingHorizontal: 10,
@@ -521,6 +557,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   agentBadgeText: { fontSize: 12, fontWeight: "700", color: c.primary },
   headerActions: { gap: 8, alignItems: "flex-end" },
+  switchModeInner: { flexDirection: "row", alignItems: "center", gap: 5 },
   switchModeBtn: {
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -584,7 +621,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  emptyEmoji: { fontSize: 36 },
   emptyText: { fontSize: 16, fontWeight: "700", color: c.foreground },
   emptyHint: { fontSize: 13, color: c.mutedForeground, textAlign: "center", lineHeight: 18 },
 
@@ -653,6 +689,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     borderRadius: 10,
   },
   statusText: { fontSize: 12, fontWeight: "700", textTransform: "capitalize" },
+  btnInner: { flexDirection: "row", alignItems: "center", gap: 6 },
   bookingActions: { flexDirection: "row", gap: 10, marginTop: 12 },
   confirmBtn: {
     flex: 1,
@@ -717,6 +754,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
+  messagesBtnInner: { flexDirection: "row", alignItems: "center", gap: 8 },
   messagesBtnText: { color: "#fff", fontWeight: "800", fontSize: 16 },
 
   linkRow: {
@@ -731,8 +769,8 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     paddingHorizontal: 18,
     marginBottom: 10,
   },
+  linkRowInner: { flexDirection: "row", alignItems: "center", gap: 10 },
   linkRowText: { color: c.foreground, fontWeight: "700", fontSize: 16 },
-  linkRowChevron: { color: c.mutedForeground, fontSize: 22, fontWeight: "300" },
 
   editProfileBtn: {
     backgroundColor: c.card,

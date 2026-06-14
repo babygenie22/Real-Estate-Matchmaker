@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, Image, StyleSheet,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { useTheme, type ThemeColors } from "@/lib/theme";
 import { VerifiedBadge, isVerified } from "@/components/VerifiedBadge";
 import { useFavorites, FavoriteAgent } from "@/lib/favorites";
@@ -26,7 +27,7 @@ type MetricKey =
 interface MetricDef {
   key: MetricKey;
   label: string;
-  emoji: string;
+  icon: (color: string, size: number) => React.ReactNode;
   // numeric value used for highlight comparison; undefined = not numeric
   value: (a: FavoriteAgent) => number | undefined;
   // displayed text
@@ -37,42 +38,50 @@ interface MetricDef {
 
 const METRICS: MetricDef[] = [
   {
-    key: "rating", label: "Rating", emoji: "⭐", better: "higher",
+    key: "rating", label: "Rating", better: "higher",
+    icon: (color, size) => <Ionicons name="star" size={size} color="#fbbf24" />,
     value: (a) => a.rating ?? undefined,
     display: (a) => a.rating != null ? `${a.rating.toFixed(1)} (${a.reviewCount ?? 0})` : "—",
   },
   {
-    key: "deals", label: "Deals closed", emoji: "🤝", better: "higher",
+    key: "deals", label: "Deals closed", better: "higher",
+    icon: (color, size) => <Feather name="check-circle" size={size} color={color} />,
     value: (a) => a.transactionCount ?? undefined,
     display: (a) => a.transactionCount != null ? `${a.transactionCount}` : "—",
   },
   {
-    key: "experience", label: "Experience", emoji: "📅", better: "higher",
+    key: "experience", label: "Experience", better: "higher",
+    icon: (color, size) => <Feather name="calendar" size={size} color={color} />,
     value: (a) => a.yearsExperience ?? undefined,
     display: (a) => a.yearsExperience != null ? `${a.yearsExperience} yrs` : "—",
   },
   {
-    key: "avgDays", label: "Avg days on mkt", emoji: "⏱", better: "lower",
+    key: "avgDays", label: "Avg days on mkt", better: "lower",
+    icon: (color, size) => <Feather name="clock" size={size} color={color} />,
     value: (a) => a.avgDaysOnMarket ?? undefined,
     display: (a) => a.avgDaysOnMarket != null ? `${a.avgDaysOnMarket}d` : "—",
   },
   {
-    key: "saleRatio", label: "Sale/list ratio", emoji: "📈", better: "higher",
+    key: "saleRatio", label: "Sale/list ratio", better: "higher",
+    icon: (color, size) => <Feather name="trending-up" size={size} color={color} />,
     value: (a) => a.saleToListRatio ?? undefined,
     display: (a) => a.saleToListRatio != null ? `${(a.saleToListRatio * 100).toFixed(0)}%` : "—",
   },
   {
-    key: "price", label: "Price range", emoji: "💰",
+    key: "price", label: "Price range",
+    icon: (color, size) => <Feather name="dollar-sign" size={size} color={color} />,
     value: () => undefined,
     display: (a) => `${formatPrice(a.priceRangeMin)}–${formatPrice(a.priceRangeMax)}`,
   },
   {
-    key: "specialties", label: "Specialties", emoji: "🏆",
+    key: "specialties", label: "Specialties",
+    icon: (color, size) => <Feather name="award" size={size} color={color} />,
     value: () => undefined,
     display: (a) => a.specialties && a.specialties.length > 0 ? a.specialties.slice(0, 2).join(", ") : "—",
   },
   {
-    key: "areas", label: "Areas", emoji: "📍",
+    key: "areas", label: "Areas",
+    icon: (color, size) => <Feather name="map-pin" size={size} color={color} />,
     value: () => undefined,
     display: (a) => a.serviceAreas && a.serviceAreas.length > 0 ? a.serviceAreas.slice(0, 2).join(", ") : "—",
   },
@@ -93,7 +102,7 @@ export default function CompareScreen() {
   if (agents.length < 2) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.emptyEmoji}>📊</Text>
+        <Feather name="bar-chart-2" size={56} color={colors.mutedForeground} />
         <Text style={styles.emptyTitle}>Select at least 2 agents to compare</Text>
       </View>
     );
@@ -126,7 +135,7 @@ export default function CompareScreen() {
           <View style={styles.labelHeaderSpacer} />
           {METRICS.map((m) => (
             <View key={m.key} style={styles.labelCell}>
-              <Text style={styles.labelEmoji}>{m.emoji}</Text>
+              {m.icon(colors.foregroundSecondary, 14)}
               <Text style={styles.labelText} numberOfLines={2}>{m.label}</Text>
             </View>
           ))}

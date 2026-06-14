@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { useTheme, type ThemeColors } from "@/lib/theme";
 import { haptics } from "@/lib/haptics";
 
@@ -63,13 +64,16 @@ export function MatchToast({
         }}
       >
         <View style={styles.iconCircle}>
-          <Text style={styles.icon}>🎉</Text>
+          <Ionicons name="sparkles" size={20} color={colors.success} />
         </View>
         <View style={styles.body}>
           <Text style={styles.title}>It's a match!</Text>
           <Text style={styles.sub} numberOfLines={1}>You and {match.agentName} can now chat</Text>
         </View>
-        <Text style={styles.cta}>Chat ›</Text>
+        <View style={styles.ctaRow}>
+          <Text style={styles.cta}>Chat</Text>
+          <Feather name="chevron-right" size={16} color={colors.success} />
+        </View>
       </Pressable>
     </Animated.View>
   );
@@ -97,9 +101,9 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: c.successLight, alignItems: "center", justifyContent: "center",
   },
-  icon: { fontSize: 20 },
   body: { flex: 1 },
   title: { fontSize: 15, fontWeight: "800", color: c.foreground },
   sub: { fontSize: 13, color: c.mutedForeground, marginTop: 1 },
+  ctaRow: { flexDirection: "row", alignItems: "center", gap: 2 },
   cta: { fontSize: 14, fontWeight: "800", color: c.success },
 });

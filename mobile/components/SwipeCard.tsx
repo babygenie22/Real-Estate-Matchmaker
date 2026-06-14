@@ -3,6 +3,7 @@ import {
   View, Text, Image, StyleSheet, Dimensions,
   PanResponder, Animated,
 } from "react-native";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { useTheme, type ThemeColors } from "@/lib/theme";
 import { VerifiedBadge, isVerified } from "@/components/VerifiedBadge";
 import { haptics } from "@/lib/haptics";
@@ -192,7 +193,7 @@ const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function SwipeCard
 
         {agent.rating != null && (
           <View style={styles.ratingRow}>
-            <Text style={styles.ratingStar}>⭐</Text>
+            <Ionicons name="star" size={14} color="#fbbf24" />
             <Text style={styles.ratingVal}>{agent.rating.toFixed(1)}</Text>
             <Text style={styles.ratingCount}>({agent.reviewCount})</Text>
             {agent.transactionCount != null && (
@@ -205,9 +206,10 @@ const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function SwipeCard
         )}
 
         {agent.serviceAreas && agent.serviceAreas.length > 0 && (
-          <Text style={styles.areas} numberOfLines={1}>
-            📍 {agent.serviceAreas.slice(0, 3).join(", ")}
-          </Text>
+          <View style={styles.areasRow}>
+            <Feather name="map-pin" size={12} color={colors.mutedForeground} />
+            <Text style={styles.areas} numberOfLines={1}>{agent.serviceAreas.slice(0, 3).join(", ")}</Text>
+          </View>
         )}
 
         {(agent.avgDaysOnMarket != null || agent.saleToListRatio != null) && (
@@ -299,13 +301,13 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   expText: { color: "#fff", fontSize: 11, fontWeight: "800" },
 
   ratingRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  ratingStar: { fontSize: 13 },
   ratingVal: { fontSize: 14, fontWeight: "700", color: c.foreground },
   ratingCount: { fontSize: 12, color: c.mutedForeground },
   ratingDot: { fontSize: 12, color: c.mutedForeground },
   ratingDeals: { fontSize: 12, color: c.mutedForeground },
 
-  areas: { fontSize: 12.5, color: c.mutedForeground },
+  areasRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  areas: { fontSize: 12.5, color: c.mutedForeground, flexShrink: 1 },
 
   statsRow: { flexDirection: "row", gap: 8, marginTop: 2 },
   statChip: {

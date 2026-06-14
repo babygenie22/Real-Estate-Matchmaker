@@ -4,6 +4,7 @@ import {
   SafeAreaView, ScrollView, RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api";
 import { SkeletonRow } from "@/components/Skeleton";
 import { VerifiedBadge, isVerified } from "@/components/VerifiedBadge";
@@ -120,7 +121,7 @@ export default function SearchScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Browse Agents</Text>
         <View style={styles.searchBar}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Feather name="search" size={16} color={colors.mutedForeground} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search by name, area, or specialty"
@@ -197,7 +198,7 @@ export default function SearchScreen() {
         </View>
       ) : results.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>🔍</Text>
+          <Feather name="search" size={56} color={colors.mutedForeground} />
           <Text style={styles.emptyTitle}>No agents found</Text>
           <Text style={styles.emptySub}>
             {filtersActive ? "Try removing a filter or searching a different term." : "Check back soon — new agents join regularly."}
@@ -254,7 +255,7 @@ function BrowseCard({
           {isVerified(agent) && <VerifiedBadge size="sm" />}
         </View>
         <View style={styles.ratingRow}>
-          <Text style={styles.star}>⭐</Text>
+          <Ionicons name="star" size={12} color="#fbbf24" />
           <Text style={styles.ratingText}>{agent.rating?.toFixed(1) ?? "—"}</Text>
           <Text style={styles.ratingCount}>({agent.reviewCount ?? 0})</Text>
           {agent.transactionCount != null && (
@@ -265,9 +266,17 @@ function BrowseCard({
           )}
         </View>
         {agent.serviceAreas && agent.serviceAreas.length > 0 && (
-          <Text style={styles.areas} numberOfLines={1}>📍 {agent.serviceAreas.slice(0, 2).join(", ")}</Text>
+          <View style={styles.areasRow}>
+            <Feather name="map-pin" size={12} color={colors.mutedForeground} />
+            <Text style={styles.areas} numberOfLines={1}>{agent.serviceAreas.slice(0, 2).join(", ")}</Text>
+          </View>
         )}
-        {price ? <Text style={styles.price}>🏷️ {price}</Text> : null}
+        {price ? (
+          <View style={styles.priceRow}>
+            <Feather name="tag" size={12} color={colors.foregroundSecondary} />
+            <Text style={styles.price}>{price}</Text>
+          </View>
+        ) : null}
         {agent.specialties && agent.specialties.length > 0 && (
           <View style={styles.tagRow}>
             {agent.specialties.slice(0, 3).map((s) => (
@@ -282,7 +291,9 @@ function BrowseCard({
         activeOpacity={0.7}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        <Text style={[styles.saveBtnText, saved && styles.saveBtnTextOn]}>{saved ? "🔖" : "♡"}</Text>
+        {saved
+          ? <Ionicons name="bookmark" size={18} color={colors.primary} />
+          : <Feather name="bookmark" size={18} color={colors.mutedForeground} />}
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -296,7 +307,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 8,
     backgroundColor: c.muted, borderRadius: 12, paddingHorizontal: 14, height: 46,
   },
-  searchIcon: { fontSize: 16 },
   searchInput: { flex: 1, fontSize: 16, color: c.foreground },
   chipScroll: { flexGrow: 0, backgroundColor: c.background },
   chipRow: { paddingHorizontal: 16, paddingVertical: 6, gap: 8, flexDirection: "row" },
@@ -327,13 +337,14 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   name: { fontSize: 16, fontWeight: "800", color: c.foreground, flexShrink: 1 },
   ratingRow: { flexDirection: "row", alignItems: "center", gap: 3, flexWrap: "wrap" },
-  star: { fontSize: 12 },
   ratingText: { fontSize: 13, fontWeight: "700", color: c.foreground },
   ratingCount: { fontSize: 12, color: c.mutedForeground },
   dot: { fontSize: 12, color: c.mutedForeground },
   metaText: { fontSize: 12, color: c.mutedForeground },
-  areas: { fontSize: 12, color: c.mutedForeground, marginTop: 2 },
-  price: { fontSize: 12, color: c.foregroundSecondary, marginTop: 2, fontWeight: "600" },
+  areasRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 2 },
+  areas: { fontSize: 12, color: c.mutedForeground, flexShrink: 1 },
+  priceRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 2 },
+  price: { fontSize: 12, color: c.foregroundSecondary, fontWeight: "600" },
   tagRow: { flexDirection: "row", gap: 6, flexWrap: "wrap", marginTop: 4 },
   tag: { backgroundColor: c.primaryLight, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
   tagText: { fontSize: 11, color: c.primary, fontWeight: "600" },

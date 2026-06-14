@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, SafeAreaView, ScrollView,
   TouchableOpacity, TextInput, Alert, ActivityIndicator,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
@@ -132,10 +133,24 @@ export default function BookingScreen() {
         {/* Summary */}
         {selectedDate && selectedTime && (
           <View style={styles.summary}>
-            <Text style={styles.summaryTitle}>📋 Booking Summary</Text>
-            <Text style={styles.summaryText}>📅 {selectedDate}</Text>
-            <Text style={styles.summaryText}>🕐 {selectedTime}</Text>
-            {agent && <Text style={styles.summaryText}>👤 {agent.name}</Text>}
+            <View style={styles.summaryTitleRow}>
+              <Feather name="clipboard" size={14} color={colors.foreground} />
+              <Text style={styles.summaryTitle}>Booking Summary</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Feather name="calendar" size={14} color={colors.foreground} />
+              <Text style={styles.summaryText}>{selectedDate}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Feather name="clock" size={14} color={colors.foreground} />
+              <Text style={styles.summaryText}>{selectedTime}</Text>
+            </View>
+            {agent && (
+              <View style={styles.summaryRow}>
+                <Feather name="user" size={14} color={colors.foreground} />
+                <Text style={styles.summaryText}>{agent.name}</Text>
+              </View>
+            )}
           </View>
         )}
       </ScrollView>
@@ -186,7 +201,9 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   timeTextSelected: { color: c.primary },
   notesInput: { borderWidth: 1, borderColor: c.border, borderRadius: 12, padding: 14, fontSize: 15, color: c.foreground, minHeight: 100, marginTop: 4 },
   summary: { backgroundColor: c.muted, borderRadius: 12, padding: 16, marginTop: 24, gap: 6, borderLeftWidth: 3, borderLeftColor: c.primary },
-  summaryTitle: { fontSize: 14, fontWeight: "700", color: c.foreground, marginBottom: 4 },
+  summaryTitleRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
+  summaryTitle: { fontSize: 14, fontWeight: "700", color: c.foreground },
+  summaryRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   summaryText: { fontSize: 14, color: c.foreground },
   footer: { padding: 16, borderTopWidth: 1, borderTopColor: c.border },
   submitBtn: { backgroundColor: c.primary, borderRadius: 14, paddingVertical: 16, alignItems: "center" },

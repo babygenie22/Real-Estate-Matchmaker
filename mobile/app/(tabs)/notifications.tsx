@@ -4,6 +4,7 @@ import {
   SafeAreaView, Alert, RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api";
 import { useTheme, type ThemeColors } from "@/lib/theme";
 import { SkeletonRow } from "@/components/Skeleton";
@@ -19,11 +20,18 @@ interface Notification {
   referenceId?: string;
 }
 
-function typeEmoji(type: string) {
-  if (type === "match") return "💚";
-  if (type === "message") return "💬";
-  if (type === "booking") return "📅";
-  return "🔔";
+function typeAccent(type: string, c: ThemeColors) {
+  if (type === "match") return c.success;
+  if (type === "message") return c.primary;
+  if (type === "booking") return c.warning;
+  return c.mutedForeground;
+}
+
+function TypeIcon({ type, color }: { type: string; color: string }) {
+  if (type === "match") return <Ionicons name="sparkles" size={20} color={color} />;
+  if (type === "message") return <Feather name="message-circle" size={20} color={color} />;
+  if (type === "booking") return <Feather name="calendar" size={20} color={color} />;
+  return <Feather name="bell" size={20} color={color} />;
 }
 
 function typeBg(type: string, c: ThemeColors) {
@@ -148,7 +156,7 @@ export default function NotificationsScreen() {
 
       {notifications.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>🔔</Text>
+          <Feather name="bell" size={52} color={colors.mutedForeground} />
           <Text style={styles.emptyTitle}>No notifications</Text>
           <Text style={styles.emptySub}>Matches, messages, and bookings will show up here.</Text>
         </View>
@@ -167,7 +175,7 @@ export default function NotificationsScreen() {
               activeOpacity={0.7}
             >
               <View style={[styles.iconCircle, { backgroundColor: typeBg(item.type, colors) }]}>
-                <Text style={styles.iconEmoji}>{typeEmoji(item.type)}</Text>
+                <TypeIcon type={item.type} color={typeAccent(item.type, colors)} />
               </View>
               <View style={styles.content}>
                 <View style={styles.contentHeader}>
@@ -233,7 +241,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     justifyContent: "center",
     flexShrink: 0,
   },
-  iconEmoji: { fontSize: 20 },
   content: { flex: 1 },
   contentHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 2 },
   itemTitle: { fontSize: 14, fontWeight: "600", color: c.foregroundSecondary, flex: 1 },
@@ -243,7 +250,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   itemTime: { fontSize: 11, color: c.mutedForeground, marginTop: 4, opacity: 0.7 },
   separator: { height: 1, backgroundColor: c.cardBorder, marginLeft: 78 },
   empty: { flex: 1, justifyContent: "center", alignItems: "center", padding: 32, gap: 12 },
-  emptyEmoji: { fontSize: 56 },
   emptyTitle: { fontSize: 20, fontWeight: "700", color: c.foreground },
   emptySub: { fontSize: 14, color: c.mutedForeground, textAlign: "center", lineHeight: 20 },
 });

@@ -1,5 +1,6 @@
 import { useRef } from "react";
-import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Pressable, StyleSheet, View } from "react-native";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/lib/theme";
 
 type Variant = "pass" | "info" | "like";
@@ -20,18 +21,18 @@ export function ActionButton({ variant, onPress }: { variant: Variant; onPress: 
 
   const cfg = {
     pass: {
-      size: 64, glyph: "✕", glyphSize: 23,
-      bg: colors.destructiveLight, glyphColor: colors.destructive, shadow: colors.destructive,
+      size: 64, iconSize: 26,
+      bg: colors.destructiveLight, iconColor: colors.destructive, shadow: colors.destructive,
       sheen: "rgba(255,255,255,0.55)",
     },
     info: {
-      size: 52, glyph: "i", glyphSize: 21,
-      bg: colors.muted, glyphColor: colors.foregroundSecondary, shadow: colors.shadowColor,
+      size: 52, iconSize: 22,
+      bg: colors.muted, iconColor: colors.foregroundSecondary, shadow: colors.shadowColor,
       sheen: "rgba(255,255,255,0.5)",
     },
     like: {
-      size: 72, glyph: "♥", glyphSize: 29,
-      bg: colors.like, glyphColor: "#ffffff", shadow: colors.like,
+      size: 72, iconSize: 32,
+      bg: colors.like, iconColor: "#ffffff", shadow: colors.like,
       sheen: "rgba(255,255,255,0.28)",
     },
   }[variant];
@@ -63,13 +64,12 @@ export function ActionButton({ variant, onPress }: { variant: Variant; onPress: 
           <View style={[styles.sheen, { height: cfg.size * 0.4, backgroundColor: cfg.sheen }]} />
           <View style={[styles.shade, { height: cfg.size * 0.3 }]} />
         </View>
-        {variant === "info" ? (
-          <View style={styles.infoMark}>
-            <View style={[styles.infoDot, { backgroundColor: cfg.glyphColor }]} />
-            <View style={[styles.infoBar, { backgroundColor: cfg.glyphColor }]} />
-          </View>
+        {variant === "like" ? (
+          <Ionicons name="heart" size={cfg.iconSize} color={cfg.iconColor} />
+        ) : variant === "pass" ? (
+          <Feather name="x" size={cfg.iconSize} color={cfg.iconColor} />
         ) : (
-          <Text style={[styles.glyph, { fontSize: cfg.glyphSize, color: cfg.glyphColor }]}>{cfg.glyph}</Text>
+          <Feather name="info" size={cfg.iconSize} color={cfg.iconColor} />
         )}
       </Animated.View>
     </Pressable>
@@ -81,8 +81,4 @@ const styles = StyleSheet.create({
   clip: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, overflow: "hidden" },
   sheen: { position: "absolute", top: 0, left: 0, right: 0 },
   shade: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.06)" },
-  glyph: { includeFontPadding: false, textAlign: "center", fontWeight: "700" },
-  infoMark: { alignItems: "center", justifyContent: "center" },
-  infoDot: { width: 4.5, height: 4.5, borderRadius: 2.25, marginBottom: 3 },
-  infoBar: { width: 4, height: 13, borderRadius: 2 },
 });

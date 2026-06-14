@@ -3,6 +3,7 @@ import {
   View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, SafeAreaView, ActivityIndicator, Alert, Image,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { io, Socket } from "socket.io-client";
 import { useAuth } from "@/lib/auth";
@@ -198,14 +199,20 @@ export default function ChatScreen() {
                 onPress={() => router.push(`/agent/${peer.agentId}` as any)}
                 activeOpacity={0.75}
               >
-                <Text style={styles.agentBarBtnText}>👤 Profile</Text>
+                <View style={styles.agentBarBtnRow}>
+                  <Feather name="user" size={13} color={colors.foreground} />
+                  <Text style={styles.agentBarBtnText}>Profile</Text>
+                </View>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.agentBarBtn, styles.agentBarBtnPrimary]}
                 onPress={() => router.push(`/booking/${peer.agentId}` as any)}
                 activeOpacity={0.75}
               >
-                <Text style={[styles.agentBarBtnText, styles.agentBarBtnTextPrimary]}>📅 Book</Text>
+                <View style={styles.agentBarBtnRow}>
+                  <Feather name="calendar" size={13} color="#fff" />
+                  <Text style={[styles.agentBarBtnText, styles.agentBarBtnTextPrimary]}>Book</Text>
+                </View>
               </TouchableOpacity>
             </View>
           )}
@@ -291,7 +298,7 @@ export default function ChatScreen() {
             returnKeyType="send"
           />
           <TouchableOpacity style={[styles.sendBtn, !input.trim() && styles.sendBtnDisabled]} onPress={sendMessage} disabled={!input.trim()}>
-            <Text style={styles.sendIcon}>➤</Text>
+            <Feather name="send" size={18} color="#fff" />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -321,6 +328,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     backgroundColor: c.primary,
     borderColor: c.primary,
   },
+  agentBarBtnRow: { flexDirection: "row", alignItems: "center", gap: 5 },
   agentBarBtnText: { fontSize: 12, fontWeight: "600", color: c.foreground },
   agentBarBtnTextPrimary: { color: "#fff" },
   messageList: { padding: 16, gap: 8, paddingBottom: 8 },

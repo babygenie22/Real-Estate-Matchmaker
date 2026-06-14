@@ -4,6 +4,7 @@ import {
   ActivityIndicator, Alert, ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { Feather } from "@expo/vector-icons";
 import SwipeCard, { type SwipeCardHandle, CARD_W, CARD_H } from "@/components/SwipeCard";
 import { SkeletonCard } from "@/components/Skeleton";
 import { ActionButton } from "@/components/ActionButton";
@@ -177,14 +178,16 @@ export default function DiscoverScreen() {
         </Text>
       </View>
       <View style={styles.headerActions}>
-        <TouchableOpacity style={styles.savedLink} onPress={() => router.push("/saved")} activeOpacity={0.7}>
-          <Text style={styles.savedLinkText}>🔖 Saved</Text>
+        <TouchableOpacity style={styles.iconLink} onPress={() => router.push("/saved")} activeOpacity={0.7}>
+          <Feather name="bookmark" size={15} color={colors.foregroundSecondary} />
+          <Text style={styles.savedLinkText}>Saved</Text>
         </TouchableOpacity>
         {loading ? (
           <ActivityIndicator size="small" color={colors.primary} style={styles.refreshSlot} />
         ) : (
-          <TouchableOpacity style={styles.refreshSlot} onPress={loadAgents} activeOpacity={0.7}>
-            <Text style={styles.refreshLink}>🔄 Refresh</Text>
+          <TouchableOpacity style={styles.iconLink} onPress={loadAgents} activeOpacity={0.7}>
+            <Feather name="refresh-cw" size={14} color={colors.primary} />
+            <Text style={styles.refreshLink}>Refresh</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -324,7 +327,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   headerTitle: { fontSize: 26, fontWeight: "900", color: c.foreground },
   headerSub: { fontSize: 13, color: c.mutedForeground, marginTop: 2 },
   headerActions: { alignItems: "flex-end", gap: 8 },
-  savedLink: { paddingVertical: 2 },
+  iconLink: { flexDirection: "row", alignItems: "center", gap: 5, paddingVertical: 2 },
   savedLinkText: { fontSize: 14, fontWeight: "700", color: c.foregroundSecondary },
   refreshSlot: { minWidth: 72, alignItems: "flex-end", justifyContent: "center" },
   refreshLink: { color: c.primary, fontSize: 14, fontWeight: "600" },

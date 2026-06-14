@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, SafeAreaView, TouchableOpacity,
   TextInput, Image, Alert, ActivityIndicator, ScrollView,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { api } from "@/lib/api";
 import { haptics } from "@/lib/haptics";
@@ -36,9 +37,11 @@ function StarRating({
           style={starStyles.starBtn}
           hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
         >
-          <Text style={[starStyles.star, star <= value && starStyles.starFilled]}>
-            ★
-          </Text>
+          <Ionicons
+            name={star <= value ? "star" : "star-outline"}
+            size={44}
+            color={star <= value ? colors.warning : colors.border}
+          />
         </TouchableOpacity>
       ))}
     </View>
