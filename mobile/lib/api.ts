@@ -24,7 +24,12 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   const res = await fetch(`${API_URL}${path}`, { ...options, headers });
-  const data = await res.json();
+  // Clear a stale/expired token so the app falls back to the auth flow instead
+  // of getting stuck making failing authenticated requests.
+  if (res.status === 401 && token) {
+    await removeToken();
+  }
+  const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || `Request failed: ${res.status}`);
   return data as T;
 }

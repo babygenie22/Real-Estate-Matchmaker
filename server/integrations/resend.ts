@@ -68,8 +68,10 @@ function baseTemplate(content: string): string {
 }
 
 export async function sendMatchEmail(to: string, userName: string, agentName: string): Promise<void> {
+  userName = escapeHtml(userName || "there");
+  agentName = escapeHtml(agentName || "your agent");
   await sendEmail(to, `🎉 You matched with ${agentName}!`, baseTemplate(`
-    <p>Hi ${userName || "there"},</p>
+    <p>Hi ${userName},</p>
     <p>Great news — you have a new match!</p>
     <div class="highlight">
       <strong>${agentName}</strong> is now in your matches. Start a conversation and take the next step toward finding your dream home.
@@ -87,12 +89,17 @@ export async function sendBookingConfirmedEmail(
   time: string,
   notes?: string
 ): Promise<void> {
+  userName = escapeHtml(userName || "there");
+  agentName = escapeHtml(agentName || "your agent");
+  date = escapeHtml(date || "");
+  time = escapeHtml(time || "");
+  const safeNotes = notes ? escapeHtml(notes) : "";
   await sendEmail(to, `✅ Booking confirmed with ${agentName}`, baseTemplate(`
-    <p>Hi ${userName || "there"},</p>
+    <p>Hi ${userName},</p>
     <p>Your consultation with <strong>${agentName}</strong> has been confirmed!</p>
     <div class="highlight">
       <strong>📅 Date:</strong> ${date}<br>
-      <strong>🕐 Time:</strong> ${time}${notes ? `<br><strong>📝 Agent notes:</strong> ${notes}` : ""}
+      <strong>🕐 Time:</strong> ${time}${safeNotes ? `<br><strong>📝 Agent notes:</strong> ${safeNotes}` : ""}
     </div>
     <p>Make sure to have any relevant documents ready. Your agent will reach out to confirm the meeting details.</p>
     <a href="${process.env.APP_URL || "http://localhost:3001"}/profile" class="btn">View Bookings →</a>
@@ -105,8 +112,10 @@ export async function sendBookingDeclinedEmail(
   agentName: string,
   reason?: string
 ): Promise<void> {
+  userName = escapeHtml(userName || "there");
+  agentName = escapeHtml(agentName || "your agent");
   await sendEmail(to, `Booking update from ${agentName}`, baseTemplate(`
-    <p>Hi ${userName || "there"},</p>
+    <p>Hi ${userName},</p>
     <p>Unfortunately, <strong>${agentName}</strong> is unable to meet at the requested time.</p>
     ${reason ? `<div class="highlight"><strong>Reason:</strong> ${escapeHtml(reason)}</div>` : ""}
     <p>Don't worry — you can request a new time or connect with other matched agents.</p>
@@ -120,8 +129,10 @@ export async function sendNewMessageEmail(
   agentName: string,
   messagePreview: string
 ): Promise<void> {
+  userName = escapeHtml(userName || "there");
+  agentName = escapeHtml(agentName || "your agent");
   await sendEmail(to, `💬 New message from ${agentName}`, baseTemplate(`
-    <p>Hi ${userName || "there"},</p>
+    <p>Hi ${userName},</p>
     <p><strong>${agentName}</strong> sent you a message:</p>
     <div class="highlight">"${escapeHtml(messagePreview)}"</div>
     <a href="${process.env.APP_URL || "http://localhost:3001"}/matches" class="btn">Reply Now →</a>
@@ -129,6 +140,7 @@ export async function sendNewMessageEmail(
 }
 
 export async function sendAgentWelcomeEmail(to: string, agentName: string): Promise<void> {
+  agentName = escapeHtml(agentName || "there");
   await sendEmail(to, "Welcome to HomeMatch — your profile is under review", baseTemplate(`
     <p>Hi ${agentName},</p>
     <p>Thanks for joining HomeMatch! Your agent profile has been submitted and is currently under review by our team.</p>

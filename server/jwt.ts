@@ -1,10 +1,14 @@
 import jwt from "jsonwebtoken";
 
-if (!process.env.JWT_SECRET && process.env.NODE_ENV === "production") {
-  throw new Error("JWT_SECRET env var is required in production");
+// Require a real secret everywhere except explicit local development. A missing
+// or default secret lets anyone forge a token for any user, so we only fall
+// back to a throwaway value when NODE_ENV === "development".
+const IS_DEV = process.env.NODE_ENV === "development";
+if (!process.env.JWT_SECRET && !IS_DEV) {
+  throw new Error("JWT_SECRET env var is required");
 }
-const JWT_SECRET = process.env.JWT_SECRET || "homematch-dev-secret-change-in-production";
-const JWT_EXPIRES = "30d";
+const JWT_SECRET = process.env.JWT_SECRET || "dev-only-insecure-secret";
+const JWT_EXPIRES = "7d";
 
 export function signToken(userId: string): string {
   return jwt.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES } as jwt.SignOptions);

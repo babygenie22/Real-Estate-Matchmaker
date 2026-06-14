@@ -37,8 +37,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function loadUser() {
     try {
-      const token = await getToken();
-      if (!token) { setIsLoading(false); return; }
+      let token = await getToken();
+      // DEV-ONLY demo convenience: auto-login as the demo buyer so the app opens
+      // without a login screen. Gated behind __DEV__ so it is stripped from any
+      // production/release build (and never authenticates real users).
+      if (!token && __DEV__) {
+        try {
+          const { token: t, user: u } = await api.post<{ token: string; user: User }>(
+            "/api/auth/mobile/login",
+            { email: "demo@homematch.test", password: "demo1234" }
+          );
+          await setToken(t);
+          setUser(u);
+          setIsLoading(false);
+          return;
+        } catch {
+          setIsLoading(false);
+          return;
+        }
+      }
       const u = await api.get<User>("/api/auth/user");
       setUser(u);
     } catch {

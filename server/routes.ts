@@ -304,7 +304,13 @@ export async function registerRoutes(
   app.put("/api/users/preferences", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
-      const user = await storage.updateUserPreferences(userId, { ...req.body, onboardingCompleted: true });
+      // Allowlist preference fields — never let the client set role, id, password, etc.
+      const allowed = ["location", "budget", "propertyType", "preferredStyle", "communicationStyle", "firstName", "lastName"];
+      const updates: Record<string, any> = { onboardingCompleted: true };
+      for (const key of allowed) {
+        if (req.body[key] !== undefined) updates[key] = req.body[key];
+      }
+      const user = await storage.updateUserPreferences(userId, updates);
       res.json(user);
     } catch (err: any) {
       res.status(400).json({ message: err.message });
@@ -333,6 +339,11 @@ export async function registerRoutes(
     try {
       const userId = req.user.id;
       const data = insertBookingSchema.parse({ ...req.body, userId });
+      // Gate by relationship: you can only book an agent you've matched with.
+      const userMatches = await storage.getMatchesByUser(userId);
+      if (!userMatches.some((m) => m.agentId === data.agentId)) {
+        return res.status(403).json({ message: "You can only book agents you've matched with." });
+      }
       const booking = await storage.createBooking(data);
       res.json(booking);
     } catch (err: any) {
