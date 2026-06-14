@@ -4,12 +4,14 @@ import {
   KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert, Switch,
 } from "react-native";
 import { useRouter } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 import { useAuth } from "@/lib/auth";
 import { useTheme, type ThemeColors } from "@/lib/theme";
 
 type Tab = "login" | "register";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const PENDING_AGENT_PW_KEY = "homematch_pending_agent_pw";
 
 export default function AuthScreen() {
   const { colors } = useTheme();
@@ -49,10 +51,12 @@ export default function AuthScreen() {
         router.replace("/");
       } else {
         if (isAgent) {
-          // Navigate to agent onboarding flow, passing credentials as params
+          // Hand the password to the agent-onboarding flow via secure storage,
+          // not navigation params (which can persist in nav history / logs).
+          await SecureStore.setItemAsync(PENDING_AGENT_PW_KEY, password);
           router.push({
             pathname: "/(auth)/agent-register",
-            params: { email: email.trim(), password },
+            params: { email: email.trim() },
           });
           setLoading(false);
           return;

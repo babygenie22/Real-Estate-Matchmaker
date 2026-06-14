@@ -5,10 +5,13 @@ import {
   KeyboardAvoidingView, Platform, Image, Animated,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 import { api, setToken } from "@/lib/api";
 import { useTheme, type ThemeColors } from "@/lib/theme";
 
 const TOTAL_STEPS = 7;
+// Must match PENDING_AGENT_PW_KEY in (auth)/index.tsx.
+const PENDING_AGENT_PW_KEY = "homematch_pending_agent_pw";
 
 const MICHIGAN_CITIES = [
   "Detroit", "Ann Arbor", "Grand Rapids", "Lansing", "Troy", "Novi",
@@ -126,9 +129,18 @@ export default function AgentRegisterScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
-  const params = useLocalSearchParams<{ email: string; password: string }>();
+  const params = useLocalSearchParams<{ email: string }>();
   const email = params.email ?? "";
-  const password = params.password ?? "";
+  // Consume the password from secure storage (set by the auth screen) and clear
+  // it immediately so it lives only in memory for this flow.
+  const [password, setPassword] = useState("");
+  useEffect(() => {
+    (async () => {
+      const pw = await SecureStore.getItemAsync(PENDING_AGENT_PW_KEY);
+      if (pw) setPassword(pw);
+      await SecureStore.deleteItemAsync(PENDING_AGENT_PW_KEY);
+    })();
+  }, []);
 
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);

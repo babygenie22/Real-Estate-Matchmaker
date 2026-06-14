@@ -114,7 +114,14 @@ export const bookings = pgTable("bookings", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const insertBookingSchema = createInsertSchema(bookings).omit({ id: true, createdAt: true });
+export const insertBookingSchema = createInsertSchema(bookings)
+  .omit({ id: true, createdAt: true })
+  .extend({
+    proposedDate: z.string().min(1).max(60),
+    proposedTime: z.string().min(1).max(30),
+    notes: z.string().max(1000).optional().nullable(),
+    agentNotes: z.string().max(1000).optional().nullable(),
+  });
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
 export type Booking = typeof bookings.$inferSelect;
 
@@ -131,7 +138,7 @@ export const reviews = pgTable("reviews", {
 
 export const insertReviewSchema = createInsertSchema(reviews)
   .omit({ id: true, createdAt: true })
-  .extend({ rating: z.number().int().min(1).max(5) });
+  .extend({ rating: z.number().int().min(1).max(5), text: z.string().max(2000).optional().nullable() });
 export type InsertReview = z.infer<typeof insertReviewSchema>;
 export type Review = typeof reviews.$inferSelect;
 
@@ -148,10 +155,25 @@ export type InsertFavorite = z.infer<typeof insertFavoriteSchema>;
 export type Favorite = typeof favorites.$inferSelect;
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, passwordHash: true, createdAt: true, updatedAt: true });
-export const insertAgentSchema = createInsertSchema(agents).omit({ id: true, createdAt: true });
+export const insertAgentSchema = createInsertSchema(agents)
+  .omit({ id: true, createdAt: true })
+  .extend({
+    name: z.string().min(1).max(120),
+    bio: z.string().max(3000).optional().nullable(),
+    licenseNumber: z.string().max(60).optional().nullable(),
+    phone: z.string().max(40).optional().nullable(),
+    // ~6mb data-URI photos allowed; cap so a single field can't bloat the row unbounded.
+    photo: z.string().max(8_000_000).optional().nullable(),
+    specialties: z.array(z.string().max(80)).max(30).optional().nullable(),
+    serviceAreas: z.array(z.string().max(80)).max(50).optional().nullable(),
+    languages: z.array(z.string().max(40)).max(20).optional().nullable(),
+    personalityTags: z.array(z.string().max(40)).max(20).optional().nullable(),
+  });
 export const insertLikeSchema = createInsertSchema(likes).omit({ id: true, createdAt: true });
 export const insertMatchSchema = createInsertSchema(matches).omit({ id: true, createdAt: true });
-export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true });
+export const insertMessageSchema = createInsertSchema(messages)
+  .omit({ id: true, createdAt: true })
+  .extend({ content: z.string().min(1).max(5000) });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;

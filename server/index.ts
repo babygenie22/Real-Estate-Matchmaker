@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
+import helmet from "helmet";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -7,9 +8,14 @@ import { createServer } from "http";
 const app = express();
 const httpServer = createServer(app);
 
-app.use(express.json());
+// Security response headers. Disable CSP/COEP since this server also serves the
+// Vite dev client in development; the API itself is consumed by a native app.
+app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 
-app.use(express.urlencoded({ extended: false }));
+// Cap request bodies. Agent photos may be base64 data URIs, so allow ~6mb.
+app.use(express.json({ limit: "6mb" }));
+
+app.use(express.urlencoded({ extended: false, limit: "6mb" }));
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {

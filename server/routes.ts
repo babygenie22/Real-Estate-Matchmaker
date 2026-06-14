@@ -86,6 +86,11 @@ export async function registerRoutes(
   app.get("/api/agents", isAuthenticated, async (req: any, res) => {
     try {
       const { search, specialty, language, zipCode, area, minPrice, maxPrice, scored, browse } = req.query;
+      // Coerce prices safely: ignore NaN/negative/absurd values instead of trusting Number().
+      const parsePrice = (v: any): number | undefined => {
+        const n = Number(v);
+        return Number.isFinite(n) && n >= 0 && n <= 100_000_000 ? n : undefined;
+      };
       const userId = req.user.id;
       let agentList;
       if (scored === "true") {
@@ -101,7 +106,7 @@ export async function registerRoutes(
         // swipe deck, by contrast, hides agents the buyer already swiped).
         const filterUserId = browse === "true" ? undefined : userId;
         agentList = await storage.getAgents(
-          { search, specialty, language, zipCode, area, minPrice: minPrice ? Number(minPrice) : undefined, maxPrice: maxPrice ? Number(maxPrice) : undefined },
+          { search, specialty, language, zipCode, area, minPrice: parsePrice(minPrice), maxPrice: parsePrice(maxPrice) },
           filterUserId
         );
       }

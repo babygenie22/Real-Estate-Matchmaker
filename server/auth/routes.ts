@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import passport from "passport";
+import rateLimit from "express-rate-limit";
 import { storage } from "../storage";
 import { isAuthenticated, hashPassword } from "./setup";
 import { signToken } from "../jwt";
@@ -12,8 +13,17 @@ const registerSchema = z.object({
   lastName: z.string().optional(),
 });
 
+// Throttle credential endpoints to blunt brute-force / credential-stuffing.
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 50, // per IP across login+register — far below brute-force scale, demo-friendly
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many attempts. Please try again later." },
+});
+
 export function registerAuthRoutes(app: Express): void {
-  app.post("/api/auth/register", async (req, res) => {
+  app.post("/api/auth/register", authLimiter, async (req, res) => {
     try {
       const data = registerSchema.parse(req.body);
       const existing = await storage.getUserByEmail(data.email.toLowerCase().trim());
@@ -41,7 +51,7 @@ export function registerAuthRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/auth/login", (req, res, next) => {
+  app.post("/api/auth/login", authLimiter, (req, res, next) => {
     passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) return next(err);
       if (!user) return res.status(401).json({ message: info?.message || "Invalid credentials" });
@@ -62,7 +72,7 @@ export function registerAuthRoutes(app: Express): void {
   });
 
   // Mobile JWT endpoints
-  app.post("/api/auth/mobile/register", async (req, res) => {
+  app.post("/api/auth/mobile/register", authLimiter, async (req, res) => {
     try {
       const data = registerSchema.parse(req.body);
       const existing = await storage.getUserByEmail(data.email.toLowerCase().trim());
@@ -79,7 +89,7 @@ export function registerAuthRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/auth/mobile/login", async (req, res) => {
+  app.post("/api/auth/mobile/login", authLimiter, async (req, res) => {
     try {
       const { email, password } = req.body;
       if (!email || !password) return res.status(400).json({ message: "Email and password required" });
@@ -98,11 +108,12 @@ export function registerAuthRoutes(app: Express): void {
 
   app.post("/api/push-token", isAuthenticated, async (req: any, res) => {
     try {
-      const { token } = req.body;
+      // Only accept well-formed Expo push tokens, not arbitrary strings.
+      const token = z.string().regex(/^Expo(nent)?PushToken\[[^\]]+\]$/).parse(req.body?.token);
       await storage.upsertUser({ id: req.user.id, expoPushToken: token });
       res.json({ success: true });
     } catch {
-      res.status(500).json({ message: "Failed to save push token" });
+      res.status(400).json({ message: "Invalid push token" });
     }
   });
 
