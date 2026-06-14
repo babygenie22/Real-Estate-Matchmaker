@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Tabs } from "expo-router";
 import { Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/lib/theme";
 import { api } from "@/lib/api";
@@ -16,12 +17,12 @@ function TabIcon({ icon, focused, badge }: { icon: IconRender; focused: boolean;
       <View
         style={{
           backgroundColor: focused ? colors.primaryLight : "transparent",
-          borderRadius: 12,
+          borderRadius: 11,
           paddingHorizontal: 12,
-          paddingVertical: 5,
+          paddingVertical: 3,
         }}
       >
-        {icon(color, 21)}
+        {icon(color, 22)}
       </View>
       {badge != null && badge > 0 && (
         <View style={{
@@ -48,6 +49,7 @@ function TabIcon({ icon, focused, badge }: { icon: IconRender; focused: boolean;
 export default function TabsLayout() {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const [unread, setUnread] = useState<number | undefined>(undefined);
   const [matchCount, setMatchCount] = useState<number | undefined>(undefined);
 
@@ -83,9 +85,10 @@ export default function TabsLayout() {
         tabBarStyle: {
           borderTopColor: colors.cardBorder,
           backgroundColor: colors.background,
-          paddingBottom: 8,
-          paddingTop: 4,
-          height: 68,
+          // Reserve room for the home indicator so icons/labels aren't clipped.
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
+          paddingTop: 8,
+          height: 60 + (insets.bottom > 0 ? insets.bottom : 8),
           shadowColor: colors.shadowColor,
           shadowOpacity: 0.08,
           shadowRadius: 12,
@@ -93,7 +96,7 @@ export default function TabsLayout() {
           elevation: 8,
         },
         tabBarShowLabel: true,
-        tabBarLabelStyle: { fontSize: 10.5, fontWeight: "600", letterSpacing: 0.3 },
+        tabBarLabelStyle: { fontSize: 10.5, fontWeight: "600", letterSpacing: 0.3, marginTop: 2 },
       }}
     >
       <Tabs.Screen

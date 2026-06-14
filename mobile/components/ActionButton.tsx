@@ -21,9 +21,9 @@ export function ActionButton({ variant, onPress }: { variant: Variant; onPress: 
 
   const cfg = {
     pass: {
-      size: 64, iconSize: 26,
-      bg: colors.destructiveLight, iconColor: colors.destructive, shadow: colors.destructive,
-      sheen: "rgba(255,255,255,0.55)",
+      size: 64, iconSize: 30,
+      bg: colors.pass, iconColor: "#ffffff", shadow: colors.pass,
+      sheen: "rgba(255,255,255,0.32)",
     },
     info: {
       size: 52, iconSize: 22,
@@ -31,9 +31,9 @@ export function ActionButton({ variant, onPress }: { variant: Variant; onPress: 
       sheen: "rgba(255,255,255,0.5)",
     },
     like: {
-      size: 72, iconSize: 32,
+      size: 72, iconSize: 36,
       bg: colors.like, iconColor: "#ffffff", shadow: colors.like,
-      sheen: "rgba(255,255,255,0.28)",
+      sheen: "rgba(255,255,255,0.3)",
     },
   }[variant];
 
@@ -50,10 +50,10 @@ export function ActionButton({ variant, onPress }: { variant: Variant; onPress: 
             borderRadius: r,
             backgroundColor: cfg.bg,
             shadowColor: cfg.shadow,
-            shadowOpacity: 0.2,
-            shadowRadius: 14,
-            shadowOffset: { width: 0, height: 7 },
-            elevation: 6,
+            shadowOpacity: 0.28,
+            shadowRadius: 12,
+            shadowOffset: { width: 0, height: 6 },
+            elevation: 7,
             transform: [{ scale }],
           },
         ]}
@@ -67,7 +67,7 @@ export function ActionButton({ variant, onPress }: { variant: Variant; onPress: 
         {variant === "like" ? (
           <Ionicons name="heart" size={cfg.iconSize} color={cfg.iconColor} />
         ) : variant === "pass" ? (
-          <Feather name="x" size={cfg.iconSize} color={cfg.iconColor} />
+          <Ionicons name="close" size={cfg.iconSize} color={cfg.iconColor} />
         ) : (
           <Feather name="info" size={cfg.iconSize} color={cfg.iconColor} />
         )}
