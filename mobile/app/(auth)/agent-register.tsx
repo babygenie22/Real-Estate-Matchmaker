@@ -194,6 +194,12 @@ export default function AgentRegisterScreen() {
       const asset = result.assets[0];
       // Store as a data URI so the backend can serve it without a separate upload pipeline.
       if (asset.base64) {
+        // Guard against oversized uploads (base64 inflates ~33%; server caps the
+        // body at 6mb). Reject anything over ~3.5mb so the request always fits.
+        if (asset.base64.length > 3_500_000) {
+          Alert.alert("Image too large", "Please pick a smaller photo (under ~2.5MB) or paste a URL.");
+          return;
+        }
         setPhoto(`data:image/jpeg;base64,${asset.base64}`);
       } else if (asset.uri) {
         setPhoto(asset.uri);
